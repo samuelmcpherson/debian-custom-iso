@@ -374,7 +374,7 @@ elif [ "$DISKLAYOUT" = "zfs_mirror" ]; then
     
     zfsMirrorDiskSetup
 
-elif [ "$DISKLAYOUT" = "ext4_single" ]
+elif [ "$DISKLAYOUT" = "ext4_single" ]; then
 
     ext4SingleDiskSetup
 
