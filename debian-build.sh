@@ -78,7 +78,6 @@ cat << EOF > $TEMPMOUNT/etc/systemd/system/getty@tty1.service.d/override.conf
 [Service]
 ExecStart=
 ExecStart=-/sbin/agetty --autologin --noclear root %I $TERM
-Type=idle
 EOF
 
 cat << EOF > $TEMPMOUNT/root/.bash_profile
