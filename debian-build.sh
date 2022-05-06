@@ -1,8 +1,10 @@
 #!/bin/bash
 
-export WORKDIR=$1
+export TARGET=$1
 
 export ROOTPASS=$2
+
+export WORKDIR="/live-build"
 
 export RELEASE=bullseye
 
@@ -77,11 +79,12 @@ mkdir $TEMPMOUNT/etc/systemd/system/getty@tty1.service.d
 cat << EOF > $TEMPMOUNT/etc/systemd/system/getty@tty1.service.d/override.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --autologin --noclear root %I $TERM
+ExecStart=-/sbin/agetty --noclear --autologin root %I $TERM
 EOF
 
 cat << EOF > $TEMPMOUNT/root/.bash_profile
-[ -z "$SSH_TTY" ] && tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
+[ -z "\$SSH_TTY" ] && [ -z "\$TMUX" ] && tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
+[ -n "\$SSH_TTY" ] && [ -z "\$TMUX" ] && tmux attach-session
 EOF
 
 mksquashfs $TEMPMOUNT $WORKDIR/staging/live/filesystem.squashfs -e boot
@@ -95,7 +98,7 @@ UI vesamenu.c32
 
 MENU TITLE Boot Menu
 DEFAULT linux
-TIMEOUT 600
+TIMEOUT 300
 MENU RESOLUTION 640 480
 MENU COLOR border       30;44   #40ffffff #a0000000 std
 MENU COLOR title        1;36;44 #9033ccff #a0000000 std
@@ -111,37 +114,37 @@ LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk ext4 root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bullseye disklayout=ext4_single
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bullseye disklayout=ext4_single
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bullseye disklayout=zfs_single
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bullseye disklayout=zfs_single
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bullseye disklayout=zfs_mirror
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bullseye disklayout=zfs_mirror
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk ext4 root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bookwrom disklayout=ext4_single
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bookwrom disklayout=ext4_single
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bookworm disklayout=zfs_single
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bookworm disklayout=zfs_single
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live nomodeset release=bookworm disklayout=zfs_mirror
+  APPEND initrd=/live/initrd boot=live nomodeset bootmode=bios release=bookworm disklayout=zfs_mirror
 
 EOF
 
@@ -152,32 +155,32 @@ set default="0"
 set timeout=30
 
 menuentry "Debian 11 bullseye: Single disk ext4 root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bullseye disklayout=ext4_single
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bullseye disklayout=ext4_single
     initrd ($root)/live/initrd
 }
 
 menuentry "Debian 11 bullseye: Single disk zfs root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bullseye disklayout=zfs_single
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bullseye disklayout=zfs_single
     initrd ($root)/live/initrd
 }
 
 menuentry "Debian 11 bullseye: Two disk zfs mirror root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bullseye disklayout=zfs_mirror
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bullseye disklayout=zfs_mirror
     initrd ($root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Single disk ext4 root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bookworm disklayout=ext4_single
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bookworm disklayout=ext4_single
     initrd ($root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Single disk zfs root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bookworm disklayout=zfs_single
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bookworm disklayout=zfs_single
     initrd ($root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Two disk zfs mirror root" {
-    linux ($root)/live/vmlinuz boot=live nomodeset release=bookworm disklayout=zfs_mirror
+    linux ($root)/live/vmlinuz boot=live nomodeset bootmode=efi release=bookworm disklayout=zfs_mirror
     initrd ($root)/live/initrd
 }
 
@@ -210,3 +213,6 @@ mcopy -vi $WORKDIR/staging/EFI/boot/efiboot.img $WORKDIR/tmp/bootx64.efi ::efi/b
 
 xorriso -as mkisofs -iso-level 3 -o "$WORKDIR/debian-custom.iso" -full-iso9660-filenames -volid "DEBIAN_CUSTOM" -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -eltorito-boot isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table --eltorito-catalog isolinux/isolinux.cat -eltorito-alt-boot -e /EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat -append_partition 2 0xef $WORKDIR/staging/EFI/boot/efiboot.img "$WORKDIR/staging"
 
+chmod a+r $WORKDIR/debian-custom.iso
+
+cp $WORKDIR/debian-custom.iso $TARGET

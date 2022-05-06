@@ -24,6 +24,8 @@ export LANG=en_US.UTF-8
 
 export TIMEZONE=America/Los_Angeles
 
+TIMEOUT=30
+
 for x in $(cat /proc/cmdline); do
         case $x in
         release=*)
@@ -31,6 +33,9 @@ for x in $(cat /proc/cmdline); do
                 ;;
         disklayout=*)
                 DISKLAYOUT=${x#disklayout=} #ext4_single, zfs_single, zfs_mirror
+                ;;
+        bootmode=*)
+                BOOTMODE=${x#bootmode=} #bios/legacy or efi/uefi
                 ;;
         esac
 done
@@ -370,6 +375,26 @@ EOF
 }
 
 ###################################################################################################
+
+echo "Debian $RELEASE will be installed with a $DISKLAYOUT root"
+echo "Installation will begin automatically in $TIMEOUT seconds"
+echo ""
+echo "Please select one of the following options:"
+echo ""
+echo "  1)Press [Return] to start the installation now"
+echo "  2)Abort the installation, the install script can be manually started with:\n      $SCRIPTDIR/debian-auto-install.sh" 
+echo "  3)Open Shell to live environment, delaying the installation until done"
+
+
+read -rt $TIMEOUT n
+if [ -z "$n" ]
+then
+    n=1
+fi
+case $n in
+  1) echo "Starting automatic install of Debian $RELEASE with $DISKLAYOUT root" ;;
+  2) exit 1 ;;
+  3) /bin/bash ;;
 
 mkdir -p $TEMPMOUNT
 
