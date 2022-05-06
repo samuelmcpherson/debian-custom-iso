@@ -53,7 +53,7 @@ zfsSingleDiskSetup(){
     sgdisk     -n1:1M:+512M   -t1:EF00 $FIRSTDISK
     sgdisk     -n2:0:0        -t2:BE00 $FIRSTDISK
 
-    sleep
+    sleep 3
 
     zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot $FIRSTDISK-part2
             

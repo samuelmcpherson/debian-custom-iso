@@ -72,15 +72,16 @@ chroot $TEMPMOUNT /bin/bash -c "umount -lf /dev/pts"
 chroot $TEMPMOUNT /bin/bash -c "umount -lf /sys"
 chroot $TEMPMOUNT /bin/bash -c "umount -lf /proc"
 
-mkdir $TEMPMOUNT/etc/systemd/system/getty@.service.d
+mkdir $TEMPMOUNT/etc/systemd/system/getty@tty1.service.d
 
-cat << EOF > $TEMPMOUNT/etc/systemd/system/getty@.service.d/override.conf
+cat << EOF > $TEMPMOUNT/etc/systemd/system/getty@tty1.service.d/override.conf
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --noclear --autologin root %I $TERM
+ExecStart=-/sbin/agetty --autologin root %I $TERM
+Type=idle
 EOF
 
-cat << EOF > $TEMPMOUNT/root/bash_profile
+cat << EOF > $TEMPMOUNT/root/.bash_profile
 tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
 EOF
 
