@@ -16,7 +16,7 @@ export ROOTPASS=changeme
 
 export DEBIAN_FRONTEND=noninteractive
 
-export NETDEVICE=$(ip -br l | grep -v lo | sed -n 1p | cut -d ' ' -f1)
+export NETDEVICES=$(ip -br l | grep -v lo | sed -n 1p | cut -d ' ' -f1)
 
 export RELEASE=
 
@@ -211,13 +211,14 @@ EOF
 bootstrap(){
     debootstrap $RELEASE $TEMPMOUNT
 
-    #mkdir -p $TEMPMOUNT/etc/network/interfaces.d
+    mkdir -p $TEMPMOUNT/etc/network/interfaces.d
 
-#cat << EOF > $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
-#auto $NETDEVICE
-#iface $NETDEVICE inet dhcp
-#EOF
-
+while IFS= read -r NETDEVICE; do
+cat << EOF > $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
+auto $NETDEVICE
+iface $NETDEVICE inet dhcp
+EOF
+done <<< "$NETDEVICES"
 
     cp /etc/hostid $TEMPMOUNT/etc/hostid
 
@@ -312,11 +313,11 @@ userSetup(){
 
     chroot $TEMPMOUNT /bin/bash -c "useradd -M -G sudo -s /bin/bash -d /home/$USER $USER"
 
-    chroot $TEMPMOUNT /bin/bash -c "/home/$USER/.ssh"
+    chroot $TEMPMOUNT /bin/bash -c "mkdir /home/$USER/.ssh"
 
     echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICKzYpvYaW10iIkmNXls5v+XbdNBXBzZMYtWBZBzXcdO ansible-ssh-key' > $TEMPMOUNT/home/$USER/.ssh/authorized_keys
 
-    chroot $TEMPMOUNT /bin/bash -c "chown -R $USER:users /home/$USER"
+    chroot $TEMPMOUNT /bin/bash -c "chown -R $USER:$USER /home/$USER"
 
     chroot $TEMPMOUNT /bin/bash -c "echo root:$ROOTPASS | chpasswd"
 
