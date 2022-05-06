@@ -82,7 +82,7 @@ Type=idle
 EOF
 
 cat << EOF > $TEMPMOUNT/root/.bash_profile
-tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
+[ -z "$SSH_TTY" ] && tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
 EOF
 
 mksquashfs $TEMPMOUNT $WORKDIR/staging/live/filesystem.squashfs -e boot
