@@ -82,10 +82,10 @@ ExecStart=
 ExecStart=-/sbin/agetty --noclear --autologin root %I $TERM
 EOF
 
-cat << EOF > $TEMPMOUNT/root/.bash_profile
-[ -z "\$SSH_TTY" ] && tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
-[ -n "\$SSH_TTY" ] && tmux attach-session
-EOF
+#cat << EOF > $TEMPMOUNT/root/.bash_profile
+#[ -z "\$SSH_TTY" ] && tmux new-session -s auto_install "$SCRIPTDIR/debian-auto-install.sh"
+#[ -n "\$SSH_TTY" ] && tmux attach-session
+#EOF
 
 mksquashfs $TEMPMOUNT $WORKDIR/staging/live/filesystem.squashfs -e boot
 

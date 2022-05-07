@@ -395,6 +395,7 @@ case $n in
   1) echo "Starting automatic install of Debian $RELEASE with $DISKLAYOUT root" ;;
   2) exit 1 ;;
   3) /bin/bash ;;
+esac
 
 mkdir -p $TEMPMOUNT
 
