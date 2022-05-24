@@ -341,15 +341,27 @@ bootSetup(){
   
     cp $SCRIPTDIR/refind.conf $TEMPMOUNT/boot/efi/EFI/refind
 
+cat << 'EOF' > $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
+#!/bin/sh
+
+[ -d "/boot/efi/EFI/debian" ] || mount /boot/efi
+sleep 1
+
+EOF
+
+    chroot $TEMPMOUNT /bin/bash -c "chmod +x /etc/kernel/preinst.d/efi-mount"
+
+    echo '[ -d "/boot/efi/EFI/debian" ] && update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
     chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/initramfs/post-update.d"
 
-cat << EOF > $TEMPMOUNT/etc/initramfs/post-update.d/10-copytoefi
+cat << EOF > $TEMPMOUNT/etc/initramfs/post-update.d/90-unmountefi
 #!/usr/bin/env bash
 
-mount /boot/efi && cp -fv $(realpath /{vmlinuz,initrd.img}) /boot/efi/EFI/debian && umount /boot/efi
+[ -d "/boot/efi/EFI/debian" ] && umount /boot/efi
 EOF
-tmux new-session -d -s my_session
-    chroot $TEMPMOUNT /bin/bash -c "chmod +x /etc/initramfs/post-update.d/10-copytoefi"
+
+    chroot $TEMPMOUNT /bin/bash -c "chmod +x /etc/initramfs/post-update.d/90-unmountefi"
 }
 
 bootSetupZfs(){
@@ -368,8 +380,13 @@ EOF
     if [ "$DISKLAYOUT" == "zfs_mirror" ]
     then
 
-        echo "mount /boot/efi2 && cp -fv $(realpath /{vmlinuz,initrd.img}) /boot/efi2/EFI/debian && umount /boot/efi2" >> $TEMPMOUNT/etc/initramfs/post-update.d/10-copytoefi
-        
+        echo '[ -d "/boot/efi2/EFI/debian" ] || mount /boot/efi2' >> $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
+        echo 'sleep 1' >> $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
+
+        echo '[ -d "/boot/efi2/EFI/debian" ] && update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+        echo '[ -d "/boot/efi2/EFI/debian" ] && umount /boot/efi2' >> $TEMPMOUNT/etc/initramfs/post-update.d/90-unmountefi
+
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi /boot/efi2"
     fi
 }
