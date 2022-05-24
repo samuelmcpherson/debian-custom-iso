@@ -198,7 +198,7 @@ ext4SingleDiskSetup(){
 
     mkfs.vfat -n EFI $FIRSTDISK-part1
 
-    mkfs.ext4 -n root $FIRSTDISK-part2
+    mkfs.ext4 $FIRSTDISK-part2
 
     mount $FIRSTDISK-part2 $TEMPMOUNT
 
@@ -209,6 +209,7 @@ ext4SingleDiskSetup(){
     mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
 
 cat << EOF > $TEMPMOUNT/etc/fstab
+/dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part2) / ext4 errors=remount-ro 0 1
 /dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
 EOF
 }
