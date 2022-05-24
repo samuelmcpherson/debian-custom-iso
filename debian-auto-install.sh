@@ -208,9 +208,16 @@ ext4SingleDiskSetup(){
 
     mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
 
+    for j in /dev/disk/by-partuuid/*; do
+        if [ "$(readlink -f $j)" = "/dev/$DISK" ] 
+            then 
+            export ROOT_PARTUUID=$j 
+        fi
+    done
+
 cat << EOF > $TEMPMOUNT/etc/fstab
-/dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part2) / ext4 errors=remount-ro 0 1
-/dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
+UUID=$(blkid -s UUID -o value $FIRSTDISK-part2) / ext4 errors=remount-ro 0 1
+UUID=$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
 EOF
 }
 
@@ -393,6 +400,11 @@ EOF
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi /boot/efi2"
     fi
 }
+bootSetupExt4(){
+cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf 
+"Boot using default options"     "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
+EOF
+}
 
 ###################################################################################################
 
@@ -435,6 +447,10 @@ else
     
     echo "Not a supported disk configuration"
 
+    sleep 500
+
+    exit 1
+
 fi
 
 bootstrap
@@ -469,10 +485,19 @@ if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
 
     zpool export zroot
 
-else
+elif [ "$DISKLAYOUT" = "ext4_single" ]; then
+
+    bootSetupExt4
 
     umount -Rl $TEMPMOUNT
 
+else 
+    
+    echo "Not a supported disk configuration, how did you get here?"
+
+    sleep 500
+
+    exit 1
 fi
     
 reboot
