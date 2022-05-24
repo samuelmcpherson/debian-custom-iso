@@ -2,7 +2,7 @@
 
 export TEMPMOUNT=/target
 
-export HOSTNAME=pxe-configured-host
+export HOSTNAME=unconfigured-host
 
 export DOMAIN=managenet.lan
 
@@ -209,7 +209,7 @@ ext4SingleDiskSetup(){
     mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
 
     for j in /dev/disk/by-partuuid/*; do
-        if [ "$(readlink -f $j)" = "/dev/$DISK" ] 
+        if [ "$(readlink -f $j)" = "/dev/$DISK"2 ] 
             then 
             export ROOT_PARTUUID=$j 
         fi
@@ -402,7 +402,7 @@ EOF
 }
 bootSetupExt4(){
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf 
-"Boot using default options"     "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
+"Standard boot"     "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
 EOF
 }
 
