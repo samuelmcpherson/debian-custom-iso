@@ -211,7 +211,7 @@ ext4SingleDiskSetup(){
     for j in /dev/disk/by-partuuid/*; do
         if [ "$(readlink -f $j)" = "/dev/$DISK"2 ] 
             then 
-            export ROOT_PARTUUID=$j 
+            export ROOT_PARTUUID=$(echo $j | cut -d '/' -f 5)
         fi
     done
 
