@@ -280,7 +280,7 @@ baseChrootConfig(){
 }
 
 packageInstallBase(){
-    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file"
+    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man" #autofs
 }
 
 packageInstallZfs(){
@@ -349,27 +349,17 @@ bootSetup(){
   
     cp $SCRIPTDIR/refind.conf $TEMPMOUNT/boot/efi/EFI/refind
 
-cat << 'EOF' > $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
-#!/bin/sh
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
-mount /boot/efi
+mount /boot/efi    
 sleep 1
 
-EOF
+update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2
 
-    chroot $TEMPMOUNT /bin/bash -c "chmod +x /etc/kernel/preinst.d/efi-mount"
-
-    echo 'update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-    chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/initramfs/post-update.d"
-
-cat << EOF > $TEMPMOUNT/etc/initramfs/post-update.d/90-unmountefi
-#!/usr/bin/env bash
-
+sleep 1
 umount /boot/efi
-EOF
 
-    chroot $TEMPMOUNT /bin/bash -c "chmod +x /etc/initramfs/post-update.d/90-unmountefi"
+EOF
 }
 
 bootSetupZfs(){
@@ -390,12 +380,16 @@ EOF
     if [ "$DISKLAYOUT" == "zfs_mirror" ]
     then
 
-        echo 'mount /boot/efi2' >> $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
-        echo 'sleep 1' >> $TEMPMOUNT/etc/kernel/preinst.d/efi-mount
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
-        echo 'update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+mount /boot/efi2
+sleep 1
 
-        echo 'umount /boot/efi2' >> $TEMPMOUNT/etc/initramfs/post-update.d/90-unmountefi
+update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2 
+
+sleep 1
+umount /boot/efi2
+EOF
 
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi /boot/efi2"
     fi
