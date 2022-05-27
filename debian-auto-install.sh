@@ -16,8 +16,6 @@ export ROOTPASS=changeme
 
 export DEBIAN_FRONTEND=noninteractive
 
-export NETDEVICES=$(ip -br l | grep -v lo | sed -n 1p | cut -d ' ' -f1)
-
 export RELEASE=
 
 export LANG=en_US.UTF-8
@@ -74,8 +72,6 @@ zfsSingleDiskSetup(){
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
     zfs create -o canmount=off -o mountpoint=/home zroot/DATA/home
     zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
-    zfs create -V 16G -b 4096 -o logbias=throughput -o sync=always -o primarycache=metadata -o com.sun:auto-snapshot=false zroot/swap
-    mkswap -f /dev/zvol/zroot/swap
 
     mkfs.vfat -n EFI $FIRSTDISK-part1
 
@@ -94,7 +90,6 @@ zfsSingleDiskSetup(){
     mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
 
 cat << EOF > $TEMPMOUNT/etc/fstab
-/dev/zvol/zroot/swap none swap defaults 0 0
 /dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
 EOF
 }
@@ -146,8 +141,6 @@ zfsMirrorDiskSetup(){
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
     zfs create -o canmount=off -o mountpoint=/home zroot/DATA/home
     zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
-    zfs create -V 16G -b 4096 -o logbias=throughput -o sync=always -o primarycache=metadata -o com.sun:auto-snapshot=false zroot/swap
-    mkswap -f /dev/zvol/zroot/swap
 
     mkfs.vfat -n EFI $FIRSTDISK-part1
 
@@ -172,7 +165,6 @@ zfsMirrorDiskSetup(){
     mount $SECONDDISK-part1 $TEMPMOUNT/boot/efi2
 
 cat << EOF > $TEMPMOUNT/etc/fstab
-/dev/zvol/zroot/swap none swap defaults 0 0
 /dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
 /dev/disk/by-uuid/$(blkid -s UUID -o value $SECONDDISK-part1) /boot/efi2 vfat defaults,noauto 0 0
 EOF
@@ -226,12 +218,22 @@ bootstrap(){
 
     mkdir -p $TEMPMOUNT/etc/network/interfaces.d
 
-while IFS= read -r NETDEVICE; do
+    for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
+
 cat << EOF > $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
 auto $NETDEVICE
 iface $NETDEVICE inet dhcp
 EOF
-done <<< "$NETDEVICES"
+
+    done
+
+    mkdir -p $TEMPMOUNT/etc/systemd/system/networking.service.d
+
+cat << EOF > $TEMPMOUNT/etc/systemd/system/networking.service.d/override.conf
+[Service]
+TimeoutStartSec=
+TimeoutStartSec=1min
+EOF
 
     cp /etc/hostid $TEMPMOUNT/etc/hostid
 
@@ -357,6 +359,10 @@ sleep 1
 update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2
 
 sleep 1
+
+cp "$2" /boot/efi
+
+sleep 1
 umount /boot/efi
 
 EOF
@@ -388,10 +394,14 @@ sleep 1
 update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2 
 
 sleep 1
+
+cp "$2" /boot/efi2
+
+sleep 1
 umount /boot/efi2
 EOF
 
-        chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi /boot/efi2"
+        chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
     fi
 }
 bootSetupExt4(){

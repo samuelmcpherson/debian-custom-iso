@@ -1,0 +1,4 @@
+run-parts: executing /etc/kernel/postinst.d/apt-auto-removal 5.15.35-1-pve /boot/vmlinuz-5.15.35-1-pve                                                                                 
+run-parts: executing /etc/kernel/postinst.d/dkms 5.15.35-1-pve /boot/vmlinuz-5.15.35-1-pve                                                                                             
+dkms: running auto installation service for kernel 5.15.35-1-pve:.                                                                                                                     
+run-parts: executing /etc/kernel/postinst.d/initramfs-tools 5.15.35-1-pve /boot/vmlinuz-5.15.35-1-pve
