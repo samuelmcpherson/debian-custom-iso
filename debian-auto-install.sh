@@ -282,7 +282,7 @@ baseChrootConfig(){
 }
 
 packageInstallBase(){
-    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man" #autofs
+    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
 }
 
 packageInstallZfs(){
@@ -295,6 +295,22 @@ postInstallConfig(){
     sed -i '/PasswordAuthentication/c\PasswordAuthentication\ no' $TEMPMOUNT/etc/ssh/sshd_config
     
     chroot $TEMPMOUNT /bin/bash -c "apt-file update"
+
+cat << 'EOF' >> $TEMPMOUNT/etc/apt/apt.conf.d/50unattended-upgrades
+
+Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+Unattended-Upgrade::MinimalSteps "true";
+Unattended-Upgrade::InstallOnShutdown "false";
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "false";
+Unattended-Upgrade::Automatic-Reboot "false";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "false";
+Unattended-Upgrade::SyslogEnable "true";
+Unattended-Upgrade::SyslogFacility "daemon";
+Unattended-Upgrade::Verbose "true";
+
+EOF
 }
 
 postInstallConfigZfs(){
@@ -353,17 +369,104 @@ bootSetup(){
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
+echo "Mounting efi system partition at /boot/efi"
 mount /boot/efi    
 sleep 1
 
+echo "Running update-initramfs targeting /boot/efi/EFI/debian/initrd.img-$version"
 update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2
 
 sleep 1
 
-cp "$2" /boot/efi
+if [ -n "$2" ]; then
+    full_kernel="$2"
+
+else
+    full_kernel="/boot/vmlinuz-$version"
+
+fi
+
+echo "Copy full kernel from /boot to /boot/efi/EFI/debian/vmlinuz-$version"
+cp "$full_kernel" /boot/efi/EFI/debian
+
+echo "Setting linux-image-$version and linux-headers-$version to manually installed to avoid autoremoval"
+apt-mark manual "linux-image-$version"
+apt-mark manual "linux-headers-$version"
+
+echo "Adding $version to list of kernels to keep in /boot/current-kernels"
+echo "$version" >> /boot/current-kernels 
+
+echo "Keeping list of kernels to keep in /boot/current-kernels to a maximum of three"
+if [ "$(wc -l /boot/current-kernels | cut -d ' ' -f 1)" == "4" ]; then
+    
+    echo "Finding the oldest kernel in the list to be kept (first line entry)"
+    old_version="$(sed -n 1p /boot/current-kernels)"
+
+    echo "Found oldest kernel to no longer keep: $old_version\nSetting linux-image-$old_version and linux-headers-$old_version to auto installed for autoremoval"
+    apt-mark auto "linux-image-$old_version"
+    apt-mark auto "linux-headers-$old_version"
+
+    echo "Removing $old_version from list of kernels to keep"
+    sed -i 1d /boot/current-kernels
+
+fi
+
 
 sleep 1
+echo "Unmounting efi system partition from /boot/efi"
 umount /boot/efi
+
+sleep 1
+
+if [ -f "/boot/efi.img-bak" ]; then
+    echo "Found existing /boot/efi.img-bak, removing"
+    rm "/boot/efi.img-bak"
+fi
+
+if [ -f "/boot/efi.img" ]; then
+    echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
+    mv "/boot/efi.img" "/boot/efi.img-bak"
+fi
+
+echo "Creating image of current efi system partition at /boot/efi.img"
+dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
+
+EOF
+
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
+
+echo "Mounting efi system partition at /boot/efi"
+mount /boot/efi    
+sleep 1
+
+echo "Running update-initramfs removing /boot/efi/EFI/debian/initrd.img-$version"
+update-initramfs -d -k "${version}" -b /boot/efi/EFI/debian >&2
+
+sleep 1
+
+full_kernel="vmlinuz-$version"
+
+echo "Removing full kernel at /boot/efi/EFI/debian/vmlinuz-$version"
+rm "/boot/efi/EFI/debian/$full_kernel"
+
+sleep 1
+echo "Unmounting efi system partition from /boot/efi"
+umount /boot/efi
+
+sleep 1
+
+if [ -f "/boot/efi.img-bak" ]; then
+    echo "Found existing /boot/efi.img-bak, removing"
+    rm "/boot/efi.img-bak"
+fi
+
+if [ -f "/boot/efi.img" ]; then
+    echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
+    mv "/boot/efi.img" "/boot/efi.img-bak"
+fi
+
+echo "Creating image of current efi system partition at /boot/efi.img"
+dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
 
 EOF
 }
@@ -388,17 +491,52 @@ EOF
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
+echo "Mounting second efi system partition at /boot/efi2"
 mount /boot/efi2
 sleep 1
 
+echo "Running update-initramfs targeting /boot/efi2/EFI/debian/initrd.img-$version"
 update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2 
 
 sleep 1
 
-cp "$2" /boot/efi2
+if [ -n "$2" ]; then
+    full_kernel="$2"
+
+else
+    full_kernel="/boot/vmlinuz-$version"
+
+fi
+
+echo "Copy full kernel from /boot to /boot/efi2/EFI/debian/vmlinuz-$version"
+cp "$full_kernel" /boot/efi2/EFI/debian
 
 sleep 1
+echo "Unmounting second efi system partition from /boot/efi2"
 umount /boot/efi2
+
+EOF
+
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
+
+echo "Mounting second efi system partition at /boot/efi2"
+mount /boot/efi2    
+sleep 1
+
+echo "Running update-initramfs removing /boot/efi2/EFI/debian/initrd.img-$version"
+update-initramfs -d -k "${version}" -b /boot/efi2/EFI/debian >&2
+
+sleep 1
+
+full_kernel="vmlinuz-$version"
+
+echo "Removing full kernel at /boot/efi2/EFI/debian/vmlinuz-$version"
+rm "/boot/efi2/EFI/debian/$full_kernel"
+
+sleep 1
+echo "Unmounting second efi system partition from /boot/efi2"
+umount /boot/efi2
+
 EOF
 
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
