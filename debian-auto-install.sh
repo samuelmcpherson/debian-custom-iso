@@ -429,8 +429,10 @@ if [ -f "/boot/efi.img" ]; then
 fi
 
 echo "Creating image of current efi system partition at /boot/efi.img"
-dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
+EOF
 
+cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
 EOF
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
@@ -466,8 +468,10 @@ if [ -f "/boot/efi.img" ]; then
 fi
 
 echo "Creating image of current efi system partition at /boot/efi.img"
-dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
+EOF
 
+cat << EOF >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
+dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
 EOF
 }
 
