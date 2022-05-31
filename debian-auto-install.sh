@@ -373,18 +373,11 @@ echo "Mounting efi system partition at /boot/efi"
 mount /boot/efi    
 sleep 1
 
-echo "Running update-initramfs targeting /boot/efi/EFI/debian/initrd.img-$version"
 update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2
 
 sleep 1
 
-if [ -n "$2" ]; then
-    full_kernel="$2"
-
-else
-    full_kernel="/boot/vmlinuz-$version"
-
-fi
+full_kernel="/boot/vmlinuz-$version"
 
 echo "Copy full kernel from /boot to /boot/efi/EFI/debian/vmlinuz-$version"
 cp "$full_kernel" /boot/efi/EFI/debian
@@ -427,11 +420,11 @@ if [ -f "/boot/efi.img" ]; then
     echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
     mv "/boot/efi.img" "/boot/efi.img-bak"
 fi
-
-echo "Creating image of current efi system partition at /boot/efi.img"
 EOF
 
 cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+echo "Creating image of current efi system partition at /boot/efi.img"
 dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
 EOF
 
@@ -441,7 +434,6 @@ echo "Mounting efi system partition at /boot/efi"
 mount /boot/efi    
 sleep 1
 
-echo "Running update-initramfs removing /boot/efi/EFI/debian/initrd.img-$version"
 update-initramfs -d -k "${version}" -b /boot/efi/EFI/debian >&2
 
 sleep 1
@@ -466,11 +458,11 @@ if [ -f "/boot/efi.img" ]; then
     echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
     mv "/boot/efi.img" "/boot/efi.img-bak"
 fi
-
-echo "Creating image of current efi system partition at /boot/efi.img"
 EOF
 
 cat << EOF >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
+
+echo "Creating image of current efi system partition at /boot/efi.img"
 dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
 EOF
 }
@@ -499,18 +491,9 @@ echo "Mounting second efi system partition at /boot/efi2"
 mount /boot/efi2
 sleep 1
 
-echo "Running update-initramfs targeting /boot/efi2/EFI/debian/initrd.img-$version"
 update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2 
 
 sleep 1
-
-if [ -n "$2" ]; then
-    full_kernel="$2"
-
-else
-    full_kernel="/boot/vmlinuz-$version"
-
-fi
 
 echo "Copy full kernel from /boot to /boot/efi2/EFI/debian/vmlinuz-$version"
 cp "$full_kernel" /boot/efi2/EFI/debian
@@ -527,12 +510,9 @@ echo "Mounting second efi system partition at /boot/efi2"
 mount /boot/efi2    
 sleep 1
 
-echo "Running update-initramfs removing /boot/efi2/EFI/debian/initrd.img-$version"
 update-initramfs -d -k "${version}" -b /boot/efi2/EFI/debian >&2
 
 sleep 1
-
-full_kernel="vmlinuz-$version"
 
 echo "Removing full kernel at /boot/efi2/EFI/debian/vmlinuz-$version"
 rm "/boot/efi2/EFI/debian/$full_kernel"
