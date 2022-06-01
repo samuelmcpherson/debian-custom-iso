@@ -16,7 +16,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 export LC_ALL=C
 
-#export NETDEVICE=$(ip -br l | grep -v lo | sed -n 1p | cut -d ' ' -f1)
+while [ -f "$WORKDIR" ]; do
+  echo "$WORKDIR already exists, creating a new work directory at $WORKDIR-new" 
+  export WORKDIR="$WORKDIR-new"
+done
 
 mkdir -p $WORKDIR/{staging/{EFI/boot,boot/grub/x86_64-efi,isolinux,live},tmp}
 
