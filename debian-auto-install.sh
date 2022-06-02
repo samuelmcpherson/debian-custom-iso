@@ -471,14 +471,13 @@ bootSetupZfs(){
     chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/efi/EFI/zbm"
     
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/zbm/refind_linux.conf
-"Boot default"  "spl.spl_hostid=0x$( hostid ) zbm.prefer=zroot zbm.skip loglevel=4"
-"Boot to menu"  "spl.spl_hostid=0x$( hostid ) zbm.prefer=zroot zbm.show loglevel=4"
+"Boot default"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.timeout=30 ro quiet loglevel=4"
+"Boot to menu"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.show ro quiet loglevel=4"
 EOF
 
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf    
 "Standard boot"   "dozfs=force root=ZFS=zroot/ROOT/default rw" 
 EOF
-    cd $TEMPMOUNT/boot/efi/EFI/zbm && wget https://github.com/zbm-dev/zfsbootmenu/releases/download/v1.12.0/zfsbootmenu-recovery-vmlinuz-x86_64-v1.12.0.EFI
 
     cd $TEMPMOUNT/boot/efi/EFI/zbm && wget https://github.com/zbm-dev/zfsbootmenu/releases/download/v1.12.0/zfsbootmenu-release-vmlinuz-x86_64-v1.12.0.EFI
 
