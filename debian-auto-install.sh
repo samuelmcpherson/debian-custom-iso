@@ -288,6 +288,7 @@ packageInstallBase(){
 
 packageInstallZfs(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y zfs-initramfs"
+    chroot $TEMPMOUNT /bin/bash -c "apt install -y sanoid"
 }
 
 postInstallConfig(){
@@ -338,6 +339,25 @@ postInstallConfigZfs(){
 
     chroot $TEMPMOUNT /bin/bash -c "cp /usr/share/systemd/tmp.mount /etc/systemd/system/"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable tmp.mount"
+
+cat << 'EOF' > $TEMPMOUNT/etc/sanoid/sanoid.conf
+[zroot]
+        use_template = production
+        recursive = yes
+
+#############################
+# templates below this line #
+#############################
+
+[template_production]
+        frequently = 0
+        hourly = 36
+        daily = 30
+        monthly = 6
+        yearly = 0
+        autosnap = yes
+        autoprune = yes
+EOF
 }
     
 userSetup(){
