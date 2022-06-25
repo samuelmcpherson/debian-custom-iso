@@ -34,7 +34,7 @@ while getopts 'l:r:u:p:w:v:h' OPTION; do
       export USER="$OPTARG"
       ;;
     p)
-      export USEPASS="$OPTARG"
+      export USERPASS="$OPTARG"
       ;;
     w)
       export WORKDIR="$OPTARG"
