@@ -1,8 +1,14 @@
 #!/bin/bash
 
-export TARGET=$1
+# Set some default values:
 
-export ROOTPASS=$2
+export LIVEROOTPASS=changeme
+
+export ROOTPASS=changeme
+
+export USER=ansible
+
+export USERPASS=changeme
 
 export WORKDIR="/live-build"
 
@@ -16,25 +22,65 @@ export DEBIAN_FRONTEND=noninteractive
 
 export LC_ALL=C
 
-while [ -f "$WORKDIR" ]; do
-  echo "$WORKDIR already exists, creating a new work directory at $WORKDIR-new" 
-  export WORKDIR="$WORKDIR-new"
+while getopts 'l:r:u:p:w:v:h' OPTION; do
+  case "$OPTION" in
+    l)
+      export LIVEROOTPASS="$OPTARG"
+      ;;
+    r)
+      export ROOTPASS="$OPTARG"
+      ;;
+    u)
+      export USER="$OPTARG"
+      ;;
+    p)
+      export USEPASS="$OPTARG"
+      ;;
+    w)
+      export WORKDIR="$OPTARG"
+      ;;
+    v)
+      export RELEASE="$OPTARG"
+      ;;
+    h)
+cat << EOF >&2
+script usage: $(basename \$0) [options] <output directory for finished iso>
+[-l <live root password>] (default: changeme)
+[-r <root password for installed system>] (default: changeme)
+[-u <user account for installed system>] (default: ansible)
+[-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
+[-v <live system release>] (default: bullseye)
+[-h] print these usage instructions
+EOF
+      exit 1
+      ;;
+    ?)
+cat << EOF >&2
+script usage: $(basename \$0) [options] <output directory for finished iso>
+[-l <live root password>] (default: changeme)
+[-r <root password for installed system>] (default: changeme)
+[-u <user account for installed system>] (default: ansible)
+[-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
+[-v <live system release>] (default: bullseye)
+[-h] print these usage instructions
+EOF
+      exit 1
+      ;;
+  esac
 done
+shift "$(($OPTIND -1))"
+
+export TARGET=$1
+
+if [ -d "$WORKDIR" ]; then
+  rm -r $WORKDIR
+fi
 
 mkdir -p $WORKDIR/{staging/{EFI/boot,boot/grub/x86_64-efi,isolinux,live},tmp}
 
 mkdir -p $TEMPMOUNT
 
 debootstrap $RELEASE $TEMPMOUNT
-
-#cat << EOF > $TEMPMOUNT/etc/network/interfaces
-
-#auto lo
-#iface lo inet loopback
-
-#auto $NETDEVICE
-#iface $NETDEVICE inet dhcp
-#EOF
 
 cat << EOF > $TEMPMOUNT/etc/apt/sources.list
 deb http://deb.debian.org/debian $RELEASE main contrib non-free
@@ -66,7 +112,7 @@ sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 
 #chroot $TEMPMOUNT /bin/bash -c "systemctl enable sshd"
 
-chroot $TEMPMOUNT /bin/bash -c "echo root:$ROOTPASS | chpasswd"
+chroot $TEMPMOUNT /bin/bash -c "echo root:$LIVEROOTPASS | chpasswd"
 
 chroot $TEMPMOUNT /bin/bash -c "cd /root && git clone https://github.com/samuelmcpherson/debian-custom-iso.git"
 
@@ -117,74 +163,74 @@ LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk ext4 root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=ext4_single
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk ext4 root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookwrom disklayout=ext4_single
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookwrom disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
 EOF
 
-cat << 'EOF' > $WORKDIR/staging/boot/grub/grub.cfg
+cat << EOF > $WORKDIR/staging/boot/grub/grub.cfg
 search --set=root --file /DEBIAN_CUSTOM
 
 set default="0"
 set timeout=30
 
 menuentry "Debian 11 bullseye: Single disk ext4 root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=ext4_single
-    initrd ($root)/live/initrd
+    linux '(\$root)'/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 menuentry "Debian 11 bullseye: Single disk zfs root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_single
-    initrd ($root)/live/initrd
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 menuentry "Debian 11 bullseye: Two disk zfs mirror root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_mirror
-    initrd ($root)/live/initrd
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Single disk ext4 root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=ext4_single
-    initrd ($root)/live/initrd
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Single disk zfs root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_single
-    initrd ($root)/live/initrd
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 menuentry "Debian 12 bookworm: Two disk zfs mirror root" {
-    linux ($root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror
-    initrd ($root)/live/initrd
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
 }
 
 

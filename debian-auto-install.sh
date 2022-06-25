@@ -2,21 +2,13 @@
 
 export TEMPMOUNT=/target
 
+export SCRIPTDIR="/root/debian-custom-iso"
+
 export HOSTNAME=unconfigured-host
 
 export DOMAIN=managenet.lan
 
-export SCRIPTDIR="/root/debian-custom-iso"
-
-export USER=ansible
-
-export USERPASS=changeme
-
-export ROOTPASS=changeme
-
 export DEBIAN_FRONTEND=noninteractive
-
-export RELEASE=
 
 export LANG=en_US.UTF-8
 
@@ -35,6 +27,15 @@ for x in $(cat /proc/cmdline); do
         bootmode=*)
                 BOOTMODE=${x#bootmode=} #bios/legacy or efi/uefi
                 ;;
+        rootpass=*)
+                ROOTPASS=${x#rootpass=}
+                ;;
+        user=*)
+                USER=${x#user=}
+                ;;
+        userpass=*)
+                USERPASS=${x#userpass=}
+                ;;           
         esac
 done
 
