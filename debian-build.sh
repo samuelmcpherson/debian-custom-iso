@@ -48,6 +48,7 @@ script usage: $(basename \$0) [options] <output directory for finished iso>
 [-l <live root password>] (default: changeme)
 [-r <root password for installed system>] (default: changeme)
 [-u <user account for installed system>] (default: ansible)
+[-p <user password for installed system>] (default: changeme)
 [-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
 [-v <live system release>] (default: bullseye)
 [-h] print these usage instructions
@@ -60,6 +61,7 @@ script usage: $(basename \$0) [options] <output directory for finished iso>
 [-l <live root password>] (default: changeme)
 [-r <root password for installed system>] (default: changeme)
 [-u <user account for installed system>] (default: ansible)
+[-p <user password for installed system>] (default: changeme)
 [-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
 [-v <live system release>] (default: bullseye)
 [-h] print these usage instructions
