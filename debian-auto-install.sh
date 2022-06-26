@@ -371,11 +371,11 @@ userSetup(){
 
     chroot $TEMPMOUNT /bin/bash -c "chown -R $USER:$USER /home/$USER"
 
-cat << "EOF" > $TEMPMOUNT/root/root-pass
+cat << EOF > $TEMPMOUNT/root/root-pass
 root:$ROOTPASS
 EOF
 
-cat << "EOF" > $TEMPMOUNT/root/user-pass
+cat << EOF > $TEMPMOUNT/root/user-pass
 $USER:$USERPASS
 EOF
 
