@@ -371,9 +371,21 @@ userSetup(){
 
     chroot $TEMPMOUNT /bin/bash -c "chown -R $USER:$USER /home/$USER"
 
-    chroot $TEMPMOUNT /bin/bash -c "echo root:$ROOTPASS | chpasswd"
+cat << "EOF" > $TEMPMOUNT/root/root-pass
+root:$ROOTPASS
+EOF
 
-    chroot $TEMPMOUNT /bin/bash -c "echo $USER:$USERPASS | chpasswd"
+cat << "EOF" > $TEMPMOUNT/root/user-pass
+$USER:$USERPASS
+EOF
+
+    chroot $TEMPMOUNT /bin/bash -c "cat /root/root-pass | chpasswd"
+
+    chroot $TEMPMOUNT /bin/bash -c "cat /root/user-pass | chpasswd"
+
+    rm $TEMPMOUNT/root/root-pass
+
+    rm $TEMPMOUNT/root/user-pass
 }
 
 bootSetup(){
