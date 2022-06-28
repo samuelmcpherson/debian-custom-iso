@@ -206,7 +206,7 @@ set default="0"
 set timeout=30
 
 menuentry "Debian 11 bullseye: Single disk ext4 root" {
-    linux '(\$root)'/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
     initrd (\$root)/live/initrd
 }
 
