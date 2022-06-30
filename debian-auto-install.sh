@@ -284,6 +284,7 @@ baseChrootConfig(){
 
 packageInstallBase(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
+    export CURRENT_KERNEL=$(chroot $TEMPMOUNT /bin/bash -c "realpath /vmlinuz")
 }
 
 packageInstallZfs(){
@@ -436,7 +437,24 @@ if [ "$(wc -l /boot/current-kernels | cut -d ' ' -f 1)" == "4" ]; then
     sed -i 1d /boot/current-kernels
 
 fi
+EOF
 
+if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
+
+cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi/EFI/debian/refind_linux.conf
+EOF
+else
+    
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi/EFI/debian/refind_linux.conf
+EOF
+
+fi
+
+cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
 sleep 1
 echo "Unmounting efi system partition from /boot/efi"
@@ -453,9 +471,6 @@ if [ -f "/boot/efi.img" ]; then
     echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
     mv "/boot/efi.img" "/boot/efi.img-bak"
 fi
-EOF
-
-cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
 echo "Creating image of current efi system partition at /boot/efi.img"
 dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
@@ -509,7 +524,7 @@ cat << EOF > $TEMPMOUNT/boot/efi/EFI/zbm/refind_linux.conf
 EOF
 
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf    
-"Standard boot"   "dozfs=force root=ZFS=zroot/ROOT/default rw" 
+"Standard boot"   "BOOT_IMAGE=$CURRENT_KERNEL dozfs=force root=ZFS=zroot/ROOT/default rw" 
 EOF
 
     cd $TEMPMOUNT/boot/efi/EFI/zbm && wget https://github.com/zbm-dev/zfsbootmenu/releases/download/v1.12.0/zfsbootmenu-release-vmlinuz-x86_64-v1.12.0.EFI
@@ -529,12 +544,30 @@ sleep 1
 
 echo "Copy full kernel from /boot to /boot/efi2/EFI/debian/vmlinuz-$version"
 cp "$full_kernel" /boot/efi2/EFI/debian
+EOF
+
+if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
+
+cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi2/EFI/debian/refind_linux.conf
 
 sleep 1
 echo "Unmounting second efi system partition from /boot/efi2"
 umount /boot/efi2
-
 EOF
+else
+    
+cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
+
+sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi2/EFI/debian/refind_linux.conf
+
+sleep 1
+echo "Unmounting second efi system partition from /boot/efi2"
+umount /boot/efi2
+EOF
+
+fi
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
 
@@ -560,7 +593,7 @@ EOF
 }
 bootSetupExt4(){
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf 
-"Standard boot"     "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
+"Standard boot"     "BOOT_IMAGE=$CURRENT_KERNEL root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
 EOF
 }
 
