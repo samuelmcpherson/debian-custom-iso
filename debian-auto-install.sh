@@ -439,20 +439,10 @@ if [ "$(wc -l /boot/current-kernels | cut -d ' ' -f 1)" == "4" ]; then
 fi
 EOF
 
-if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
-
-cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi/EFI/debian/refind_linux.conf
-EOF
-else
-    
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
 sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi/EFI/debian/refind_linux.conf
 EOF
-
-fi
 
 cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
@@ -546,18 +536,6 @@ echo "Copy full kernel from /boot to /boot/efi2/EFI/debian/vmlinuz-$version"
 cp "$full_kernel" /boot/efi2/EFI/debian
 EOF
 
-if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
-
-cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi2/EFI/debian/refind_linux.conf
-
-sleep 1
-echo "Unmounting second efi system partition from /boot/efi2"
-umount /boot/efi2
-EOF
-else
-    
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
 sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi2/EFI/debian/refind_linux.conf
@@ -566,8 +544,6 @@ sleep 1
 echo "Unmounting second efi system partition from /boot/efi2"
 umount /boot/efi2
 EOF
-
-fi
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
 
