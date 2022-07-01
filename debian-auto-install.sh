@@ -441,7 +441,7 @@ EOF
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
-sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi/EFI/debian/refind_linux.conf
+sed -i "s|BOOT_IMAGE=/boot/\([^ ]*\) |BOOT_IMAGE=$full_kernel |g" /boot/efi/EFI/debian/refind_linux.conf
 EOF
 
 cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
@@ -538,7 +538,7 @@ EOF
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 
-sed -i "s/BOOT_IMAGE=\/boot\/\([^ ]*\) /BOOT_IMAGE=$full_kernel /g" /boot/efi2/EFI/debian/refind_linux.conf
+sed -i "s|BOOT_IMAGE=/boot/\([^ ]*\) |BOOT_IMAGE=$full_kernel |g" /boot/efi2/EFI/debian/refind_linux.conf
 
 sleep 1
 echo "Unmounting second efi system partition from /boot/efi2"
