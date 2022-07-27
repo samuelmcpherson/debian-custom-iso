@@ -341,6 +341,8 @@ postInstallConfigZfs(){
     chroot $TEMPMOUNT /bin/bash -c "cp /usr/share/systemd/tmp.mount /etc/systemd/system/"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable tmp.mount"
 
+    chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/sanoid"
+
 cat << 'EOF' > $TEMPMOUNT/etc/sanoid/sanoid.conf
 [zroot]
         use_template = production
