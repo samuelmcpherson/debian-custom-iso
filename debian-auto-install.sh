@@ -27,6 +27,9 @@ for x in $(cat /proc/cmdline); do
         bootmode=*)
                 BOOTMODE=${x#bootmode=} #bios/legacy or efi/uefi
                 ;;
+        encryptionpass=*)
+                ENCRYPTIONPASS=${x#encryptionpass=}
+                ;;
         rootpass=*)
                 ROOTPASS=${x#rootpass=}
                 ;;
@@ -45,8 +48,7 @@ zfsSingleDiskSetup(){
     DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 1p)
 
     for i in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $i)" = "/dev/$DISK" ] 
-            then 
+        if [ "$(readlink -f $i)" = "/dev/$DISK" ]; then 
             export FIRSTDISK=$i 
         fi
     done
@@ -59,8 +61,15 @@ zfsSingleDiskSetup(){
 
     sleep 3
 
-    zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot $FIRSTDISK-part2
-            
+    if [ -n "$ENCRYPTION" ]; then
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot $FIRSTDISK-part2
+    elif [ -z "$ENCRYPTION" ]; then
+        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot $FIRSTDISK-part2
+    else 
+        echo "Not a supported encryption configuration, how did you get here?"
+        sleep 500
+        exit 1
+
     zfs create -o canmount=off -o mountpoint=none -o org.zfsbootmenu:rootprefix="root=zfs:" -o org.zfsbootmenu:commandline="ro" zroot/ROOT
 
     zfs create -o canmount=noauto -o mountpoint=/ zroot/ROOT/default
@@ -71,7 +80,7 @@ zfsSingleDiskSetup(){
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var/lib
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
-    zfs create -o canmount=off -o mountpoint=/home zroot/DATA/home
+    zfs create -o canmount=on -o mountpoint=/home zroot/DATA/home
     zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
 
     mkfs.vfat -n EFI $FIRSTDISK-part1
@@ -79,6 +88,8 @@ zfsSingleDiskSetup(){
     zpool export zroot
 
     zpool import -N -R $TEMPMOUNT zroot
+
+    echo "$ENCRYPTIONPASS" | zfs load-keys zroot
 
     zfs mount zroot/ROOT/default
 
@@ -101,15 +112,13 @@ zfsMirrorDiskSetup(){
     DISK2=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 2p)
 
     for i in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $i)" = "/dev/$DISK1" ] 
-            then 
+        if [ "$(readlink -f $i)" = "/dev/$DISK1" ]; then 
             export FIRSTDISK=$i 
         fi
     done
 
     for j in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $j)" = "/dev/$DISK2" ] 
-            then 
+        if [ "$(readlink -f $j)" = "/dev/$DISK2" ]; then 
             export SECONDDISK=$j 
         fi
     done
@@ -128,7 +137,14 @@ zfsMirrorDiskSetup(){
 
     sleep 3    
 
-    zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
+    if [ -n "$ENCRYPTION" ]; then
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
+    elif [ -z "$ENCRYPTION" ]; then
+        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
+    else 
+        echo "Not a supported encryption configuration, how did you get here?"
+        sleep 500
+        exit 1
             
     zfs create -o canmount=off -o mountpoint=none -o org.zfsbootmenu:rootprefix="root=zfs:" -o org.zfsbootmenu:commandline="ro" zroot/ROOT
 
@@ -140,7 +156,7 @@ zfsMirrorDiskSetup(){
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var/lib
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
-    zfs create -o canmount=off -o mountpoint=/home zroot/DATA/home
+    zfs create -o canmount=on -o mountpoint=/home zroot/DATA/home
     zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
 
     mkfs.vfat -n EFI $FIRSTDISK-part1
@@ -150,6 +166,8 @@ zfsMirrorDiskSetup(){
     zpool export zroot
 
     zpool import -N -R $TEMPMOUNT zroot
+
+    echo "$ENCRYPTIONPASS" | zfs load-keys zroot
 
     zfs mount zroot/ROOT/default
 
@@ -202,8 +220,7 @@ ext4SingleDiskSetup(){
     mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
 
     for j in /dev/disk/by-partuuid/*; do
-        if [ "$(readlink -f $j)" = "/dev/$DISK"2 ] 
-            then 
+        if [ "$(readlink -f $j)" = "/dev/$DISK"2 ]; then 
             export ROOT_PARTUUID=$(echo $j | cut -d '/' -f 5)
         fi
     done
@@ -521,8 +538,7 @@ EOF
 
     cd $TEMPMOUNT/boot/efi/EFI/zbm && wget https://github.com/zbm-dev/zfsbootmenu/releases/download/v1.12.0/zfsbootmenu-release-vmlinuz-x86_64-v1.12.0.EFI
 
-    if [ "$DISKLAYOUT" == "zfs_mirror" ]
-    then
+    if [ "$DISKLAYOUT" == "zfs_mirror" ]; then
 
 cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
 

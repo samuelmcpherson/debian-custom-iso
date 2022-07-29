@@ -22,10 +22,13 @@ export DEBIAN_FRONTEND=noninteractive
 
 export LC_ALL=C
 
-while getopts 'l:r:u:p:w:v:h' OPTION; do
+while getopts 'l:e:r:u:p:d:v:s:w:h' OPTION; do
   case "$OPTION" in
     l)
       export LIVEROOTPASS="$OPTARG"
+      ;;
+    e)
+      export ENCRYPTIONPASS="$OPTARG"
       ;;
     r)
       export ROOTPASS="$OPTARG"
@@ -36,11 +39,17 @@ while getopts 'l:r:u:p:w:v:h' OPTION; do
     p)
       export USERPASS="$OPTARG"
       ;;
-    w)
+    d)
       export WORKDIR="$OPTARG"
       ;;
     v)
       export RELEASE="$OPTARG"
+      ;;
+    s)
+      export WIFISSID="$OPTARG"
+      ;;
+    w)
+      export WIFIPASS="$OPTARG"
       ;;
     h)
 cat << EOF >&2
@@ -106,11 +115,30 @@ cp /etc/resolv.conf $TEMPMOUNT/etc/resolv.conf
 
 chroot $TEMPMOUNT /bin/bash -c "apt -y update"
 
-chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd"
+chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd firmware-iwlwifi network-manager"
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
+#chroot $TEMPMOUNT /bin/bash -c "systemctl enable NetworkManager"
+
 chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
+
+chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/NetworkManager/system-connections"
+
+cat << EOF > "$TEMPMOUNT/etc/NetworkManager/system-connections/$WIFISSID.nmconnection"
+[wifi]
+mac-address-blacklist=
+mode=infrastructure
+ssid=$WIFISSID
+
+[wifi-security]
+key-mgmt=wpa-psk
+psk=$WIFIPASS
+
+[ipv4]
+dns-search=
+method=auto
+EOF
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 
@@ -173,13 +201,13 @@ LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk ext4 root
@@ -191,13 +219,13 @@ LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 EOF
 
@@ -217,8 +245,18 @@ menuentry "Debian 11 bullseye: Single disk zfs root" {
     initrd (\$root)/live/initrd
 }
 
+menuentry "Debian 11 bullseye: Single disk zfs root (encrypted)" {
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
+    initrd (\$root)/live/initrd
+}
+
 menuentry "Debian 11 bullseye: Two disk zfs mirror root" {
     linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+    initrd (\$root)/live/initrd
+}
+
+menuentry "Debian 11 bullseye: Two disk zfs mirror root (encrypted)" {
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
     initrd (\$root)/live/initrd
 }
 
@@ -232,12 +270,20 @@ menuentry "Debian 12 bookworm: Single disk zfs root" {
     initrd (\$root)/live/initrd
 }
 
-menuentry "Debian 12 bookworm: Two disk zfs mirror root" {
-    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+menuentry "Debian 12 bookworm: Single disk zfs root (encrypted)" {
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
     initrd (\$root)/live/initrd
 }
 
+menuentry "Debian 12 bookworm: Two disk zfs mirror root" {
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
+    initrd (\$root)/live/initrd
+}
 
+menuentry "Debian 12 bookworm: Two disk zfs mirror root (encrypted)" {
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
+    initrd (\$root)/live/initrd
+}
 EOF
 
 cat << 'EOF' > $WORKDIR/tmp/grub-standalone.cfg
