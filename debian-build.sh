@@ -119,13 +119,17 @@ chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linu
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
-#chroot $TEMPMOUNT /bin/bash -c "systemctl enable NetworkManager"
-
 chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
 
 chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/NetworkManager/system-connections"
 
 cat << EOF > "$TEMPMOUNT/etc/NetworkManager/system-connections/$WIFISSID.nmconnection"
+[connection]
+id=$WIFISSID
+uuid=154cfd50-8b67-4a83-9d43-4950f93c7a5b
+type=wifi
+permissions=
+
 [wifi]
 mac-address-blacklist=
 mode=infrastructure
@@ -138,11 +142,16 @@ psk=$WIFIPASS
 [ipv4]
 dns-search=
 method=auto
+
+[ipv6]
+addr-gen-mode=stable-privacy
+dns-search=
+method=auto
+
+[proxy]
 EOF
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
-
-#chroot $TEMPMOUNT /bin/bash -c "systemctl enable sshd"
 
 chroot $TEMPMOUNT /bin/bash -c "echo root:$LIVEROOTPASS | chpasswd"
 

@@ -69,6 +69,7 @@ zfsSingleDiskSetup(){
         echo "Not a supported encryption configuration, how did you get here?"
         sleep 500
         exit 1
+    fi
 
     zfs create -o canmount=off -o mountpoint=none -o org.zfsbootmenu:rootprefix="root=zfs:" -o org.zfsbootmenu:commandline="ro" zroot/ROOT
 
@@ -88,8 +89,10 @@ zfsSingleDiskSetup(){
     zpool export zroot
 
     zpool import -N -R $TEMPMOUNT zroot
-
-    echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+    
+    if [ -n "$ENCRYPTION" ]; then
+        echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+    fi
 
     zfs mount zroot/ROOT/default
 
@@ -145,6 +148,7 @@ zfsMirrorDiskSetup(){
         echo "Not a supported encryption configuration, how did you get here?"
         sleep 500
         exit 1
+    fi
             
     zfs create -o canmount=off -o mountpoint=none -o org.zfsbootmenu:rootprefix="root=zfs:" -o org.zfsbootmenu:commandline="ro" zroot/ROOT
 
@@ -167,7 +171,9 @@ zfsMirrorDiskSetup(){
 
     zpool import -N -R $TEMPMOUNT zroot
 
-    echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+    if [ -n "$ENCRYPTION" ]; then
+        echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+    fi
 
     zfs mount zroot/ROOT/default
 
