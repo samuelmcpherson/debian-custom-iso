@@ -124,7 +124,8 @@ chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/network-autoconnect.service"
 [Unit]
 Description=Wifi network
-After=NetworkManager.service
+After=network.target
+Requires=network.target
 
 [Service]
 Type=simple
