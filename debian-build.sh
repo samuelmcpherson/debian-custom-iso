@@ -124,15 +124,11 @@ chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/network-autoconnect.service"
 [Unit]
 Description=Wifi network
-After=network.target
-Requires=network.target
+After=systemd-rfkill.service
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
-
-[Install]
-WantedBy=multi-user.target
 EOF
 
 chroot $TEMPMOUNT /bin/bash -c "systemctl enable network-autoconnect.service"
