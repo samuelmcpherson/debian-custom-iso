@@ -150,8 +150,6 @@ chroot $TEMPMOUNT /bin/bash -c "ln -s /etc/systemd/system/network-autoconnect.se
 
 chroot $TEMPMOUNT /bin/bash -c "systemctl set-default wifi.target"
 
-sleep 750
-
 #chroot $TEMPMOUNT /bin/bash -c "systemctl enable network-autoconnect.service"
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
