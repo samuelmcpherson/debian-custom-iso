@@ -119,7 +119,7 @@ chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linu
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
-chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
+#chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
 
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi.target"
 [Unit]
@@ -142,9 +142,11 @@ ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
 WantedBy=wifi.target
 EOF
 
+chroot $TEMPMOUNT /bin/bash -c "mkdir /etc/systemd/system/network-autoconnect.service /etc/systemd/system/wifi.target.wants"
+
 chroot $TEMPMOUNT /bin/bash -c "ln -s /etc/systemd/system/network-autoconnect.service /etc/systemd/system/wifi.target.wants/network-autoconnect.service"
 
-chroot $TEMPMOUNT /bin/bash -c "systemctl daemon-reload"
+#chroot $TEMPMOUNT /bin/bash -c "systemctl daemon-reload"
 
 chroot $TEMPMOUNT /bin/bash -c "systemctl set-default wifi.target"
 
