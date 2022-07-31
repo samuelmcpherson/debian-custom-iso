@@ -644,6 +644,8 @@ else
 
 fi
 
+systemctl start network-autoconnect.service
+
 bootstrap
 
 baseChrootConfig
