@@ -61,9 +61,9 @@ zfsSingleDiskSetup(){
 
     sleep 3
 
-    if [ -n "$ENCRYPTION" ]; then
+    if [ -n "$ENCRYPTIONPASS" ]; then
         echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot $FIRSTDISK-part2
-    elif [ -z "$ENCRYPTION" ]; then
+    elif [ -z "$ENCRYPTIONPASS" ]; then
         zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot $FIRSTDISK-part2
     else 
         echo "Not a supported encryption configuration, how did you get here?"
@@ -90,7 +90,7 @@ zfsSingleDiskSetup(){
 
     zpool import -N -R $TEMPMOUNT zroot
     
-    if [ -n "$ENCRYPTION" ]; then
+    if [ -n "$ENCRYPTIONPASS" ]; then
         echo "$ENCRYPTIONPASS" | zfs load-keys zroot
     fi
 
@@ -140,9 +140,9 @@ zfsMirrorDiskSetup(){
 
     sleep 3    
 
-    if [ -n "$ENCRYPTION" ]; then
+    if [ -n "$ENCRYPTIONPASS" ]; then
         echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
-    elif [ -z "$ENCRYPTION" ]; then
+    elif [ -z "$ENCRYPTIONPASS" ]; then
         zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
     else 
         echo "Not a supported encryption configuration, how did you get here?"
@@ -171,7 +171,7 @@ zfsMirrorDiskSetup(){
 
     zpool import -N -R $TEMPMOUNT zroot
 
-    if [ -n "$ENCRYPTION" ]; then
+    if [ -n "$ENCRYPTIONPASS" ]; then
         echo "$ENCRYPTIONPASS" | zfs load-keys zroot
     fi
 
@@ -644,7 +644,11 @@ else
 
 fi
 
+sleep 3
+
 systemctl start network-autoconnect.service
+
+sleep 3
 
 bootstrap
 
