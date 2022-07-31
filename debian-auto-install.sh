@@ -646,7 +646,9 @@ fi
 
 sleep 3
 
-systemctl start network-autoconnect.service
+echo "Verifying network connectivity to determine if automatic wifi connection should be attempted"
+
+ping -c 4 google.com || systemctl start network-autoconnect.service
 
 sleep 3
 
