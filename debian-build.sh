@@ -121,19 +121,36 @@ chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms 
 
 chroot $TEMPMOUNT /bin/bash -c "timedatectl set-ntp true"
 
+cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi.target"
+[Unit]
+Description=Wifi network
+Requires=multi-user.target
+After=multi-user.target
+AllowIsolate=yes
+EOF
+
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/network-autoconnect.service"
 [Unit]
 Description=Wifi network
-After=systemd-rfkill.service
+After=multi-user.target
 
 [Service]
 Type=simple
 ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
+
+[install]
+WantedBy=wifi.target
 EOF
 
-chroot $TEMPMOUNT /bin/bash -c "systemctl enable network-autoconnect.service"
+chroot $TEMPMOUNT /bin/bash -c "ln -s /etc/systemd/system/network-autoconnect.service /etc/systemd/system/wifi.target.wants/network-autoconnect.service"
 
-chroot $TEMPMOUNT /bin/bash -c "mkdir -p /etc/NetworkManager/system-connections"
+chroot $TEMPMOUNT /bin/bash -c "systemctl daemon-reload"
+
+chroot $TEMPMOUNT /bin/bash -c "systemctl set-default wifi.target"
+
+sleep 750
+
+#chroot $TEMPMOUNT /bin/bash -c "systemctl enable network-autoconnect.service"
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 
