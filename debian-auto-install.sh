@@ -91,7 +91,7 @@ zfsSingleDiskSetup(){
     zpool import -N -R $TEMPMOUNT zroot
     
     if [ -n "$ENCRYPTIONPASS" ]; then
-        echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+        echo "$ENCRYPTIONPASS" | zfs load-key zroot
     fi
 
     zfs mount zroot/ROOT/default
@@ -172,7 +172,7 @@ zfsMirrorDiskSetup(){
     zpool import -N -R $TEMPMOUNT zroot
 
     if [ -n "$ENCRYPTIONPASS" ]; then
-        echo "$ENCRYPTIONPASS" | zfs load-keys zroot
+        echo "$ENCRYPTIONPASS" | zfs load-key zroot
     fi
 
     zfs mount zroot/ROOT/default
