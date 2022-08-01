@@ -308,6 +308,12 @@ baseChrootConfig(){
 packageInstallBase(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
     export CURRENT_KERNEL=$(chroot $TEMPMOUNT /bin/bash -c "realpath /vmlinuz")
+
+    if [ -n "$WIFI_NEEDED" ]; then
+       chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi network-manager"
+
+       cp /etc/systemd/system/network-autoconnect.service $TEMPMOUNT/etc/systemd/system/network-autoconnect.service 
+    fi
 }
 
 packageInstallZfs(){
@@ -646,9 +652,21 @@ fi
 
 sleep 3
 
-echo "Verifying network connectivity to determine if automatic wifi connection should be attempted"
+echo "Checking network connectivity..."
+echo ''
 
-ping -c 4 google.com || systemctl start network-autoconnect.service
+ping -c 4 google.com || export WIFI_NEEDED=yes
+
+echo ''
+
+if [ -n "$WIFI_NEEDED" ]; then
+
+    echo "No network connectivity, attempting to conect to wifi..."
+    echo ''
+    
+    systemctl start network-autoconnect.service
+
+fi
 
 sleep 3
 
