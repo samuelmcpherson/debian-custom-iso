@@ -312,7 +312,11 @@ packageInstallBase(){
     if [ -n "$WIFI_NEEDED" ]; then
        chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi network-manager"
 
-       cp /etc/systemd/system/network-autoconnect.service $TEMPMOUNT/etc/systemd/system/network-autoconnect.service 
+       cp /etc/systemd/system/network-autoconnect.service $TEMPMOUNT/etc/systemd/system/network-autoconnect.service
+
+        for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
+            rm $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
+        done
     fi
 }
 
@@ -366,7 +370,7 @@ postInstallConfigZfs(){
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-import-cache"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-mount"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-import.target"
-
+rm /etc/postfix/main.cf
     chroot $TEMPMOUNT /bin/bash -c "cp /usr/share/systemd/tmp.mount /etc/systemd/system/"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable tmp.mount"
 

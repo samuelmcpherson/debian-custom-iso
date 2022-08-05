@@ -188,10 +188,22 @@ LABEL linux
   MENU LABEL Debian 11 bullseye: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+  
+LABEL linux
+  MENU LABEL Debian 11 bullseye: Single disk zfs root (encrypted)
+  MENU DEFAULT
+  KERNEL /live/vmlinuz
   APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 LABEL linux
   MENU LABEL Debian 11 bullseye: Two disk zfs mirror root
+  MENU DEFAULT
+  KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+
+LABEL linux
+  MENU LABEL Debian 11 bullseye: Two disk zfs mirror root (encrypted)
   MENU DEFAULT
   KERNEL /live/vmlinuz
   APPEND initrd=/live/initrd boot=live bootmode=bios release=bullseye disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
@@ -206,14 +218,25 @@ LABEL linux
   MENU LABEL Debian 12 bookworm: Single disk zfs root
   MENU DEFAULT
   KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
+
+LABEL linux
+  MENU LABEL Debian 12 bookworm: Single disk zfs root (encrypted)
+  MENU DEFAULT
+  KERNEL /live/vmlinuz
   APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 
 LABEL linux
   MENU LABEL Debian 12 bookworm: Two disk zfs mirror root
   MENU DEFAULT
   KERNEL /live/vmlinuz
-  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
 
+LABEL linux
+  MENU LABEL Debian 12 bookworm: Two disk zfs mirror root (encrypted)
+  MENU DEFAULT
+  KERNEL /live/vmlinuz
+  APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 EOF
 
 cat << EOF > $WORKDIR/staging/boot/grub/grub.cfg
@@ -263,7 +286,7 @@ menuentry "Debian 12 bookworm: Single disk zfs root (encrypted)" {
 }
 
 menuentry "Debian 12 bookworm: Two disk zfs mirror root" {
-    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
+    linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS
     initrd (\$root)/live/initrd
 }
 
