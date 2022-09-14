@@ -602,8 +602,12 @@ EOF
     fi
 }
 bootSetupExt4(){
-cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf 
-"Standard boot"     "BOOT_IMAGE=$CURRENT_KERNEL root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
+cat << EOF >> $TEMPMOUNT/boot/efi/EFI/refind/refind.conf 
+menuentry "Standard Boot" {
+    loader   /boot/vmlinuz-%v
+    initrd   /boot/initrd.img-%v
+    options  "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
+}
 EOF
 }
 
