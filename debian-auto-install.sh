@@ -445,7 +445,11 @@ EOF
 
     sed -i 's/ "/ intel_ish_ipc intel_ishtp_hid intel_ishtp intel_ishtp_loader "/' $TEMPMOUNT/boot/zfsbootmenu/etc/zfsbootmenu/dracut.conf.d/omit-drivers.conf
 
-    chroot $TEMPMOUNT /bin/bash -c 'cd /boot/zbm-build && /boot/zfsbootmenu/zbm-builder.sh -l /boot/zfsbootmenu'
+    cp $TEMPMOUNT/etc/zfs/zpool.cache $TEMPMOUNT/boot/zbm-build/zpool.cache
+
+    cp $TEMPMOUNT/etc/hostid $TEMPMOUNT/boot/zbm-build/hostid
+
+    /boot/zfsbootmenu/zbm-builder.sh -l $TEMPMOUNT/boot/zfsbootmenu -b $TEMPMOUNT/boot/zbm-build
 
     cp $TEMPMOUNT/boot/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
@@ -455,12 +459,8 @@ EOF
     fi
 }
 bootSetupExt4(){
-cat << EOF >> $TEMPMOUNT/boot/efi/EFI/refind/refind.conf 
-menuentry "Standard Boot" {
-    loader   /boot/vmlinuz-%v
-    initrd   /boot/initrd.img-%v
-    options  "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
-}
+cat << EOF > $TEMPMOUNT/boot/refind_linux.conf
+"Boot default"  "root=PARTUUID=$ROOT_PARTUUID rw add_efi_memmap"
 EOF
 }
 
@@ -472,7 +472,8 @@ echo ""
 echo "Please select one of the following options:"
 echo ""
 echo "  1)Press [Return] to start the installation now"
-echo "  2)Abort the installation, the install script can be manually started with:\n      $SCRIPTDIR/debian-auto-install.sh" 
+echo "  2)Abort the installation, the install script can be manually started with:"
+echo "    $SCRIPTDIR/debian-auto-install.sh" 
 echo "  3)Open Shell to live environment, delaying the installation until done"
 
 

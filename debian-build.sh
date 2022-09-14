@@ -115,7 +115,7 @@ cp /etc/resolv.conf $TEMPMOUNT/etc/resolv.conf
 
 chroot $TEMPMOUNT /bin/bash -c "apt -y update"
 
-chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd firmware-iwlwifi network-manager"
+chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd firmware-iwlwifi network-manager qemu-guest-agent podman buildah"
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
