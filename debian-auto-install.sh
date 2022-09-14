@@ -427,176 +427,29 @@ EOF
 bootSetup(){
 
     chroot $TEMPMOUNT /bin/bash -c "apt -y install refind efibootmgr"
-    
-    chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/efi/EFI/debian"
-    
-    chroot $TEMPMOUNT /bin/bash -c "cp /boot/vmlinuz-* /boot/efi/EFI/debian"
-
-    chroot $TEMPMOUNT /bin/bash -c "cp /boot/initrd.img-* /boot/efi/EFI/debian"
   
     cp $SCRIPTDIR/refind.conf $TEMPMOUNT/boot/efi/EFI/refind
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-echo "Mounting efi system partition at /boot/efi"
-mount /boot/efi    
-sleep 1
-
-update-initramfs -c -k "${version}" -b /boot/efi/EFI/debian >&2
-
-sleep 1
-
-full_kernel="/boot/vmlinuz-$version"
-
-echo "Copy full kernel from /boot to /boot/efi/EFI/debian/vmlinuz-$version"
-cp "$full_kernel" /boot/efi/EFI/debian
-
-echo "Setting linux-image-$version and linux-headers-$version to manually installed to avoid autoremoval"
-apt-mark manual "linux-image-$version"
-apt-mark manual "linux-headers-$version"
-
-echo "Adding $version to list of kernels to keep in /boot/current-kernels"
-echo "$version" >> /boot/current-kernels 
-
-echo "Keeping list of kernels to keep in /boot/current-kernels to a maximum of three"
-if [ "$(wc -l /boot/current-kernels | cut -d ' ' -f 1)" == "4" ]; then
-    
-    echo "Finding the oldest kernel in the list to be kept (first line entry)"
-    old_version="$(sed -n 1p /boot/current-kernels)"
-
-    echo "Found oldest kernel to no longer keep: $old_version\nSetting linux-image-$old_version and linux-headers-$old_version to auto installed for autoremoval"
-    apt-mark auto "linux-image-$old_version"
-    apt-mark auto "linux-headers-$old_version"
-
-    echo "Removing $old_version from list of kernels to keep"
-    sed -i 1d /boot/current-kernels
-
-fi
-EOF
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-sed -i "s|BOOT_IMAGE=/boot/\([^ ]*\) |BOOT_IMAGE=$full_kernel |g" /boot/efi/EFI/debian/refind_linux.conf
-EOF
-
-cat << EOF >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-sleep 1
-echo "Unmounting efi system partition from /boot/efi"
-umount /boot/efi
-
-sleep 1
-
-if [ -f "/boot/efi.img-bak" ]; then
-    echo "Found existing /boot/efi.img-bak, removing"
-    rm "/boot/efi.img-bak"
-fi
-
-if [ -f "/boot/efi.img" ]; then
-    echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
-    mv "/boot/efi.img" "/boot/efi.img-bak"
-fi
-
-echo "Creating image of current efi system partition at /boot/efi.img"
-dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
-EOF
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
-
-echo "Mounting efi system partition at /boot/efi"
-mount /boot/efi    
-sleep 1
-
-update-initramfs -d -k "${version}" -b /boot/efi/EFI/debian >&2
-
-sleep 1
-
-full_kernel="vmlinuz-$version"
-
-echo "Removing full kernel at /boot/efi/EFI/debian/vmlinuz-$version"
-rm "/boot/efi/EFI/debian/$full_kernel"
-
-sleep 1
-echo "Unmounting efi system partition from /boot/efi"
-umount /boot/efi
-
-sleep 1
-
-if [ -f "/boot/efi.img-bak" ]; then
-    echo "Found existing /boot/efi.img-bak, removing"
-    rm "/boot/efi.img-bak"
-fi
-
-if [ -f "/boot/efi.img" ]; then
-    echo "Found existing /boot/efi.img, renaming to /boot/efi.img-bak"
-    mv "/boot/efi.img" "/boot/efi.img-bak"
-fi
-EOF
-
-cat << EOF >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
-
-echo "Creating image of current efi system partition at /boot/efi.img"
-dd "if=$FIRSTDISK-part1" "of=/boot/efi.img" bs=4096 status=progress
-EOF
 }
 
 bootSetupZfs(){
     chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/efi/EFI/zbm"
+
+    chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/zbm-build"
     
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/zbm/refind_linux.conf
 "Boot default"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.timeout=30 ro quiet loglevel=4"
 "Boot to menu"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.show ro quiet loglevel=4"
 EOF
 
-cat << EOF > $TEMPMOUNT/boot/efi/EFI/debian/refind_linux.conf    
-"Standard boot"   "BOOT_IMAGE=$CURRENT_KERNEL dozfs=force root=ZFS=zroot/ROOT/default rw" 
-EOF
+    cd $TEMPMOUNT/boot && git clone https://github.com/zbm-dev/zfsbootmenu.git
 
-    cd $TEMPMOUNT/boot/efi/EFI/zbm && wget https://github.com/zbm-dev/zfsbootmenu/releases/download/v1.12.0/zfsbootmenu-release-vmlinuz-x86_64-v1.12.0.EFI
+    sed -i 's/ "/ intel_ish_ipc intel_ishtp_hid intel_ishtp intel_ishtp_loader "/' $TEMPMOUNT/boot/zfsbootmenu/etc/zfsbootmenu/dracut.conf.d/omit-drivers.conf
+
+    chroot $TEMPMOUNT /bin/bash -c 'cd /boot/zbm-build && /boot/zfsbootmenu/zbm-builder.sh -l /boot/zfsbootmenu'
+
+    cp $TEMPMOUNT/boot/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
     if [ "$DISKLAYOUT" == "zfs_mirror" ]; then
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-echo "Mounting second efi system partition at /boot/efi2"
-mount /boot/efi2
-sleep 1
-
-update-initramfs -c -k "${version}" -b /boot/efi2/EFI/debian >&2 
-
-sleep 1
-
-echo "Copy full kernel from /boot to /boot/efi2/EFI/debian/vmlinuz-$version"
-cp "$full_kernel" /boot/efi2/EFI/debian
-EOF
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postinst.d/initramfs-tools
-
-sed -i "s|BOOT_IMAGE=/boot/\([^ ]*\) |BOOT_IMAGE=$full_kernel |g" /boot/efi2/EFI/debian/refind_linux.conf
-
-sleep 1
-echo "Unmounting second efi system partition from /boot/efi2"
-umount /boot/efi2
-EOF
-
-cat << 'EOF' >> $TEMPMOUNT/etc/kernel/postrm.d/initramfs-tools
-
-echo "Mounting second efi system partition at /boot/efi2"
-mount /boot/efi2    
-sleep 1
-
-update-initramfs -d -k "${version}" -b /boot/efi2/EFI/debian >&2
-
-sleep 1
-
-echo "Removing full kernel at /boot/efi2/EFI/debian/vmlinuz-$version"
-rm "/boot/efi2/EFI/debian/$full_kernel"
-
-sleep 1
-echo "Unmounting second efi system partition from /boot/efi2"
-umount /boot/efi2
-
-EOF
 
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
     fi
