@@ -449,7 +449,7 @@ EOF
 
     cp $TEMPMOUNT/etc/hostid $TEMPMOUNT/boot/zbm-build/hostid
 
-    /boot/zfsbootmenu/zbm-builder.sh -l $TEMPMOUNT/boot/zfsbootmenu -b $TEMPMOUNT/boot/zbm-build
+    $TEMPMOUNT/boot/zfsbootmenu/zbm-builder.sh -l $TEMPMOUNT/boot/zfsbootmenu -b $TEMPMOUNT/boot/zbm-build
 
     cp $TEMPMOUNT/boot/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
