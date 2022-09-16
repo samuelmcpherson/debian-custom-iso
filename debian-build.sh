@@ -115,11 +115,19 @@ cp /etc/resolv.conf $TEMPMOUNT/etc/resolv.conf
 
 chroot $TEMPMOUNT /bin/bash -c "apt -y update"
 
-chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd firmware-iwlwifi network-manager qemu-guest-agent podman buildah"
+chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux dosfstools debootstrap gdisk dkms dpkg-dev sed git vim efibootmgr live-boot openssh-server tmux systemd-timesyncd firmware-iwlwifi network-manager qemu-guest-agent"
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
-cat << EOF > "$TEMPMOUNT/etc/systemd/system/network-autoconnect.service"
+mkdir $TEMPMOUNT/root/zbm-build
+
+git clone https://github.com/zbm-dev/zfsbootmenu.git $TEMPMOUNT/root/zfsbootmenu
+
+sed -i 's/ "/ intel_ish_ipc intel_ishtp_hid intel_ishtp intel_ishtp_loader "/' $TEMPMOUNT/root/zfsbootmenu/etc/zfsbootmenu/dracut.conf.d/omit-drivers.conf
+
+$TEMPMOUNT/root/zfsbootmenu/zbm-builder.sh -C -H -l $TEMPMOUNT/root/zfsbootmenu -b $TEMPMOUNT/root/zbm-build
+
+cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
 [Unit]
 Description=Wifi network
 After=multi-user.target
@@ -133,8 +141,7 @@ sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 
 chroot $TEMPMOUNT /bin/bash -c "echo root:$LIVEROOTPASS | chpasswd"
 
-chroot $TEMPMOUNT /bin/bash -c "cd /root && git clone https://github.com/samuelmcpherson/debian-custom-iso.git"
-
+chroot $TEMPMOUNT /bin/bash -c "git clone https://github.com/samuelmcpherson/debian-custom-iso.git /root/debian-custom-iso"
 chroot $TEMPMOUNT /bin/bash -c "apt clean"
 chroot $TEMPMOUNT /bin/bash -c "rm -rf /tmp/*"
 chroot $TEMPMOUNT /bin/bash -c "rm /etc/resolv.conf"

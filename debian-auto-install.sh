@@ -291,7 +291,7 @@ baseChrootConfig(){
     
     chroot $TEMPMOUNT /bin/bash -c "apt install -y locales"
 
-    chroot $TEMPMOUNT /bin/bash -c "ln -sf /usr/share/zoneinfo/"$TIMEZONE" /etc/localtime"
+    chroot $TEMPMOUNT /bin/bash -c "ln -sf /usr/share/zoneinfo/$TIMEZONE /etc/localtime"
     chroot $TEMPMOUNT /bin/bash -c "hwclock --systohc"
 
     echo "$LANG UTF-8" >> $TEMPMOUNT/etc/locale.gen
@@ -307,12 +307,11 @@ baseChrootConfig(){
 
 packageInstallBase(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
-    export CURRENT_KERNEL=$(chroot $TEMPMOUNT /bin/bash -c "realpath /vmlinuz")
 
     if [ -n "$WIFI_NEEDED" ]; then
        chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi network-manager"
 
-       cp /etc/systemd/system/network-autoconnect.service $TEMPMOUNT/etc/systemd/system/network-autoconnect.service
+       cp /etc/systemd/system/wifi-autoconnect.service $TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service
 
         for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
             rm $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
@@ -370,7 +369,7 @@ postInstallConfigZfs(){
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-import-cache"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-mount"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable zfs-import.target"
-rm /etc/postfix/main.cf
+
     chroot $TEMPMOUNT /bin/bash -c "cp /usr/share/systemd/tmp.mount /etc/systemd/system/"
     chroot $TEMPMOUNT /bin/bash -c "systemctl enable tmp.mount"
 
@@ -433,25 +432,13 @@ bootSetup(){
 
 bootSetupZfs(){
     chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/efi/EFI/zbm"
-
-    chroot $TEMPMOUNT /bin/bash -c "mkdir -p /boot/zbm-build"
     
 cat << EOF > $TEMPMOUNT/boot/efi/EFI/zbm/refind_linux.conf
 "Boot default"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.timeout=30 ro quiet loglevel=4"
 "Boot to menu"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.show ro quiet loglevel=4"
 EOF
 
-    cd $TEMPMOUNT/boot && git clone https://github.com/zbm-dev/zfsbootmenu.git
-
-    sed -i 's/ "/ intel_ish_ipc intel_ishtp_hid intel_ishtp intel_ishtp_loader "/' $TEMPMOUNT/boot/zfsbootmenu/etc/zfsbootmenu/dracut.conf.d/omit-drivers.conf
-
-    cp $TEMPMOUNT/etc/zfs/zpool.cache $TEMPMOUNT/boot/zbm-build/zpool.cache
-
-    cp $TEMPMOUNT/etc/hostid $TEMPMOUNT/boot/zbm-build/hostid
-
-    $TEMPMOUNT/boot/zfsbootmenu/zbm-builder.sh -l $TEMPMOUNT/boot/zfsbootmenu -b $TEMPMOUNT/boot/zbm-build
-
-    cp $TEMPMOUNT/boot/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
+    cp /root/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
     if [ "$DISKLAYOUT" == "zfs_mirror" ]; then
 
@@ -526,7 +513,7 @@ if [ -n "$WIFI_NEEDED" ]; then
     echo "No network connectivity, attempting to conect to wifi..."
     echo ''
     
-    systemctl start network-autoconnect.service
+    systemctl start wifi-autoconnect.service
 
 fi
 
