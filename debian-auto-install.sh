@@ -14,6 +14,8 @@ export LANG=en_US.UTF-8
 
 export TIMEZONE=America/Los_Angeles
 
+export LIVEDISK=$(lsblk -dno pkname "$(mount | grep '/usr/lib/live/mount/medium' | cut -d ' ' -f1)")
+
 TIMEOUT=30
 
 for x in $(cat /proc/cmdline); do
@@ -45,7 +47,7 @@ done
 ###################################################################################################
 
 zfsSingleDiskSetup(){
-    DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 1p)
+    DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 1p)
 
     for i in /dev/disk/by-id/*; do
         if [ "$(readlink -f $i)" = "/dev/$DISK" ]; then 
@@ -110,9 +112,9 @@ EOF
 }
 
 zfsMirrorDiskSetup(){
-    DISK1=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 1p)
+    DISK1=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 1p)
 
-    DISK2=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 2p)
+    DISK2=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 2p)
 
     for i in /dev/disk/by-id/*; do
         if [ "$(readlink -f $i)" = "/dev/$DISK1" ]; then 
@@ -196,7 +198,7 @@ EOF
 }
 
 ext4SingleDiskSetup(){
-    DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | sed -n 1p)
+    DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 1p)
 
     for i in /dev/disk/by-id/*; do
         if [ "$(readlink -f $i)" = "/dev/$DISK" ] 
