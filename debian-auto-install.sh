@@ -309,7 +309,7 @@ packageInstallBase(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
 
     if [ -n "$WIFI_NEEDED" ]; then
-       chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi network-manager"
+       chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi firmware-libertas network-manager"
 
        cp /etc/systemd/system/wifi-autoconnect.service $TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service
 
