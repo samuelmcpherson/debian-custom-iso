@@ -79,19 +79,19 @@ EOF
       ;;
   esac
 done
-shift "$(($OPTIND -1))"
+shift "$(("$OPTIND" -1))"
 
 export TARGET=$1
 
 if [ -d "$WORKDIR" ]; then
-  rm -r $WORKDIR
+  rm -r "$WORKDIR"
 fi
 
-mkdir -p $WORKDIR/{staging/{EFI/boot,boot/grub/x86_64-efi,isolinux,live},tmp}
+mkdir -p "$WORKDIR"/{staging/{EFI/boot,boot/grub/x86_64-efi,isolinux,live},tmp}
 
 mkdir -p $TEMPMOUNT
 
-debootstrap $RELEASE $TEMPMOUNT
+debootstrap "$RELEASE" $TEMPMOUNT
 
 cat << EOF > $TEMPMOUNT/etc/apt/sources.list
 deb http://deb.debian.org/debian $RELEASE main contrib non-free
@@ -162,13 +162,13 @@ cat << EOF > $TEMPMOUNT/root/.bash_profile
 [ -n "\$SSH_TTY" ] && tmux attach-session
 EOF
 
-mksquashfs $TEMPMOUNT $WORKDIR/staging/live/filesystem.squashfs -e boot
+mksquashfs $TEMPMOUNT "$WORKDIR"/staging/live/filesystem.squashfs -e boot
 
-cp $TEMPMOUNT/boot/vmlinuz-* $WORKDIR/staging/live/vmlinuz 
+cp $TEMPMOUNT/boot/vmlinuz-* "$WORKDIR"/staging/live/vmlinuz 
 
-cp $TEMPMOUNT/boot/initrd.img-* $WORKDIR/staging/live/initrd
+cp $TEMPMOUNT/boot/initrd.img-* "$WORKDIR"/staging/live/initrd
 
-cat << EOF > $WORKDIR/staging/isolinux/isolinux.cfg
+cat << EOF > "$WORKDIR"/staging/isolinux/isolinux.cfg
 UI vesamenu.c32
 
 MENU TITLE Boot Menu
@@ -246,7 +246,7 @@ LABEL linux
   APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 EOF
 
-cat << EOF > $WORKDIR/staging/boot/grub/grub.cfg
+cat << EOF > "$WORKDIR"/staging/boot/grub/grub.cfg
 search --set=root --file /DEBIAN_CUSTOM
 
 set default="0"
@@ -303,13 +303,13 @@ menuentry "Debian 12 bookworm: Two disk zfs mirror root (encrypted)" {
 }
 EOF
 
-cat << 'EOF' > $WORKDIR/tmp/grub-standalone.cfg
+cat << 'EOF' > "$WORKDIR"/tmp/grub-standalone.cfg
 search --set=root --file /DEBIAN_CUSTOM
 set prefix=($root)/boot/grub/
 configfile /boot/grub/grub.cfg
 EOF
 
-touch $WORKDIR/staging/DEBIAN_CUSTOM
+touch "$WORKDIR"/staging/DEBIAN_CUSTOM
 
 cp /usr/lib/ISOLINUX/isolinux.bin "$WORKDIR/staging/isolinux/" 
 
@@ -317,18 +317,18 @@ cp /usr/lib/syslinux/modules/bios/* "$WORKDIR/staging/isolinux/"
 
 cp -r /usr/lib/grub/x86_64-efi/* "$WORKDIR/staging/boot/grub/x86_64-efi/"
 
-grub-mkstandalone --format=x86_64-efi --output=$WORKDIR/tmp/bootx64.efi --locales="" --fonts="" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
+grub-mkstandalone --format=x86_64-efi --output="$WORKDIR"/tmp/bootx64.efi --locales="" --fonts="" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
 
-dd if=/dev/zero of=$WORKDIR/staging/EFI/boot/efiboot.img bs=1M count=20 
+dd if=/dev/zero of="$WORKDIR"/staging/EFI/boot/efiboot.img bs=1M count=20 
 
-mkfs.vfat $WORKDIR/staging/EFI/boot/efiboot.img 
+mkfs.vfat "$WORKDIR"/staging/EFI/boot/efiboot.img 
 
-mmd -i $WORKDIR/staging/EFI/boot/efiboot.img efi efi/boot
+mmd -i "$WORKDIR"/staging/EFI/boot/efiboot.img efi efi/boot
 
-mcopy -vi $WORKDIR/staging/EFI/boot/efiboot.img $WORKDIR/tmp/bootx64.efi ::efi/boot/
+mcopy -vi "$WORKDIR"/staging/EFI/boot/efiboot.img "$WORKDIR"/tmp/bootx64.efi ::efi/boot/
 
-xorriso -as mkisofs -iso-level 3 -o "$WORKDIR/debian-custom.iso" -full-iso9660-filenames -volid "DEBIAN_CUSTOM" -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -eltorito-boot isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table --eltorito-catalog isolinux/isolinux.cat -eltorito-alt-boot -e /EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat -append_partition 2 0xef $WORKDIR/staging/EFI/boot/efiboot.img "$WORKDIR/staging"
+xorriso -as mkisofs -iso-level 3 -o "$WORKDIR/debian-custom.iso" -full-iso9660-filenames -volid "DEBIAN_CUSTOM" -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -eltorito-boot isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table --eltorito-catalog isolinux/isolinux.cat -eltorito-alt-boot -e /EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat -append_partition 2 0xef "$WORKDIR"/staging/EFI/boot/efiboot.img "$WORKDIR/staging"
 
-chmod a+r $WORKDIR/debian-custom.iso
+chmod a+r "$WORKDIR"/debian-custom.iso
 
-cp $WORKDIR/debian-custom.iso $TARGET
+cp "$WORKDIR"/debian-custom.iso "$TARGET"

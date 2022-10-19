@@ -14,7 +14,10 @@ export LANG=en_US.UTF-8
 
 export TIMEZONE=America/Los_Angeles
 
-export LIVEDISK=$(lsblk -dno pkname "$(mount | grep '/usr/lib/live/mount/medium' | cut -d ' ' -f1)")
+LIVEDISK=$(lsblk -dno pkname "$(mount | grep '/usr/lib/live/mount/medium' | cut -d ' ' -f1)")
+export LIVEDISK
+
+export KEY_FILE='etc/zfs/zroot.key'
 
 TIMEOUT=30
 
@@ -26,9 +29,10 @@ for x in $(cat /proc/cmdline); do
         disklayout=*)
                 DISKLAYOUT=${x#disklayout=} #ext4_single, zfs_single, zfs_mirror
                 ;;
-        bootmode=*)
-                BOOTMODE=${x#bootmode=} #bios/legacy or efi/uefi
-                ;;
+        # legacy boot not currently supported
+        # bootmode=*)
+        #         BOOTMODE=${x#bootmode=} #bios/legacy or efi/uefi
+        #         ;;
         encryptionpass=*)
                 ENCRYPTIONPASS=${x#encryptionpass=}
                 ;;
@@ -50,23 +54,23 @@ zfsSingleDiskSetup(){
     DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 1p)
 
     for i in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $i)" = "/dev/$DISK" ]; then 
+        if [[ "$(readlink -f "$i")" = "/dev/$DISK" ]]; then 
             export FIRSTDISK=$i 
         fi
     done
             
-    sgdisk --zap-all $FIRSTDISK
-    sgdisk --clear $FIRSTDISK
+    sgdisk --zap-all "$FIRSTDISK"
+    sgdisk --clear "$FIRSTDISK"
 
-    sgdisk     -n1:1M:+512M   -t1:EF00 $FIRSTDISK
-    sgdisk     -n2:0:0        -t2:BE00 $FIRSTDISK
+    sgdisk     -n1:1M:+512M   -t1:EF00 "$FIRSTDISK"
+    sgdisk     -n2:0:0        -t2:BE00 "$FIRSTDISK"
 
     sleep 3
 
-    if [ -n "$ENCRYPTIONPASS" ]; then
-        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot $FIRSTDISK-part2
-    elif [ -z "$ENCRYPTIONPASS" ]; then
-        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot $FIRSTDISK-part2
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file:///$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot "$FIRSTDISK-part2"
+    elif [[ -z "$ENCRYPTIONPASS" ]]; then
+        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot "$FIRSTDISK-part2"
     else 
         echo "Not a supported encryption configuration, how did you get here?"
         sleep 500
@@ -84,15 +88,15 @@ zfsSingleDiskSetup(){
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var/lib
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
     zfs create -o canmount=on -o mountpoint=/home zroot/DATA/home
-    zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
+    zfs create -o canmount=on -o mountpoint=/home/"$USER" zroot/DATA/home/"$USER"
 
-    mkfs.vfat -n EFI $FIRSTDISK-part1
+    mkfs.vfat -n EFI "$FIRSTDISK-part1"
 
     zpool export zroot
 
     zpool import -N -R $TEMPMOUNT zroot
     
-    if [ -n "$ENCRYPTIONPASS" ]; then
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
         echo "$ENCRYPTIONPASS" | zfs load-key zroot
     fi
 
@@ -104,10 +108,10 @@ zfsSingleDiskSetup(){
 
     mkdir -p $TEMPMOUNT/etc
 
-    mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
+    mount "$FIRSTDISK-part1" $TEMPMOUNT/boot/efi
 
 cat << EOF > $TEMPMOUNT/etc/fstab
-/dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
+/dev/disk/by-uuid/$(blkid -s UUID -o value "$FIRSTDISK-part1") /boot/efi vfat defaults,noauto 0 0
 EOF
 }
 
@@ -117,35 +121,35 @@ zfsMirrorDiskSetup(){
     DISK2=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 2p)
 
     for i in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $i)" = "/dev/$DISK1" ]; then 
+        if [[ "$(readlink -f "$i")" = "/dev/$DISK1" ]]; then 
             export FIRSTDISK=$i 
         fi
     done
 
     for j in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $j)" = "/dev/$DISK2" ]; then 
+        if [[ "$(readlink -f "$j")" = "/dev/$DISK2" ]]; then 
             export SECONDDISK=$j 
         fi
     done
             
-    sgdisk --zap-all $FIRSTDISK
-    sgdisk --clear $FIRSTDISK
+    sgdisk --zap-all "$FIRSTDISK"
+    sgdisk --clear "$FIRSTDISK"
 
-    sgdisk     -n1:1M:+512M   -t1:EF00 $FIRSTDISK
-    sgdisk     -n2:0:0        -t2:BE00 $FIRSTDISK
+    sgdisk     -n1:1M:+512M   -t1:EF00 "$FIRSTDISK"
+    sgdisk     -n2:0:0        -t2:BE00 "$FIRSTDISK"
 
-    sgdisk --zap-all $SECONDDISK
-    sgdisk --clear $SECONDDISK
+    sgdisk --zap-all "$SECONDDISK"
+    sgdisk --clear "$SECONDDISK"
 
-    sgdisk     -n1:1M:+512M   -t1:EF00 $SECONDDISK
-    sgdisk     -n2:0:0        -t2:BE00 $SECONDDISK
+    sgdisk     -n1:1M:+512M   -t1:EF00 "$SECONDDISK"
+    sgdisk     -n2:0:0        -t2:BE00 "$SECONDDISK"
 
     sleep 3    
 
-    if [ -n "$ENCRYPTIONPASS" ]; then
-        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=on -O keylocation=prompt -O keyformat=passphrase -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
-    elif [ -z "$ENCRYPTIONPASS" ]; then
-        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror $FIRSTDISK-part2 $SECONDDISK-part2
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file:///$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot mirror "$FIRSTDISK-part2" "$SECONDDISK-part2"
+    elif [[ -z "$ENCRYPTIONPASS" ]]; then
+        zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror "$FIRSTDISK-part2" "$SECONDDISK-part2"
     else 
         echo "Not a supported encryption configuration, how did you get here?"
         sleep 500
@@ -163,17 +167,17 @@ zfsMirrorDiskSetup(){
     zfs create -o canmount=off -o mountpoint=none zroot/DATA/var/lib
     zfs create -o canmount=on -o mountpoint=/var/log zroot/DATA/var/log
     zfs create -o canmount=on -o mountpoint=/home zroot/DATA/home
-    zfs create -o canmount=on -o mountpoint=/home/$USER zroot/DATA/home/$USER
+    zfs create -o canmount=on -o mountpoint=/home/"$USER" zroot/DATA/home/"$USER"
 
-    mkfs.vfat -n EFI $FIRSTDISK-part1
+    mkfs.vfat -n EFI "$FIRSTDISK-part1"
 
-    mkfs.vfat -n EFI2 $SECONDDISK-part1
+    mkfs.vfat -n EFI2 "$SECONDDISK-part1"
 
     zpool export zroot
 
     zpool import -N -R $TEMPMOUNT zroot
 
-    if [ -n "$ENCRYPTIONPASS" ]; then
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
         echo "$ENCRYPTIONPASS" | zfs load-key zroot
     fi
 
@@ -187,13 +191,13 @@ zfsMirrorDiskSetup(){
 
     mkdir -p $TEMPMOUNT/etc
 
-    mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
+    mount "$FIRSTDISK-part1" $TEMPMOUNT/boot/efi
 
-    mount $SECONDDISK-part1 $TEMPMOUNT/boot/efi2
+    mount "$SECONDDISK-part1" $TEMPMOUNT/boot/efi2
 
 cat << EOF > $TEMPMOUNT/etc/fstab
-/dev/disk/by-uuid/$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
-/dev/disk/by-uuid/$(blkid -s UUID -o value $SECONDDISK-part1) /boot/efi2 vfat defaults,noauto 0 0
+/dev/disk/by-uuid/$(blkid -s UUID -o value "$FIRSTDISK-part1") /boot/efi vfat defaults,noauto 0 0
+/dev/disk/by-uuid/$(blkid -s UUID -o value "$SECONDDISK-part1") /boot/efi2 vfat defaults,noauto 0 0
 EOF
 }
 
@@ -201,52 +205,53 @@ ext4SingleDiskSetup(){
     DISK=$(lsblk -dno NAME | grep -v sr0 | grep -v loop | grep -v "$LIVEDISK" | sed -n 1p)
 
     for i in /dev/disk/by-id/*; do
-        if [ "$(readlink -f $i)" = "/dev/$DISK" ] 
+        if [[ "$(readlink -f "$i")" = "/dev/$DISK" ]] 
             then 
             export FIRSTDISK=$i 
         fi
     done
             
-    sgdisk --zap-all $FIRSTDISK
-    sgdisk --clear $FIRSTDISK
+    sgdisk --zap-all "$FIRSTDISK"
+    sgdisk --clear "$FIRSTDISK"
 
-    sgdisk     -n1:1M:+512M   -t1:EF00 $FIRSTDISK
-    sgdisk     -n2:0:0        -t2:8300 $FIRSTDISK
+    sgdisk     -n1:1M:+512M   -t1:EF00 "$FIRSTDISK"
+    sgdisk     -n2:0:0        -t2:8300 "$FIRSTDISK"
       
     sleep 3
 
-    mkfs.vfat -n EFI $FIRSTDISK-part1
+    mkfs.vfat -n EFI "$FIRSTDISK-part1"
 
-    mkfs.ext4 $FIRSTDISK-part2
+    mkfs.ext4 "$FIRSTDISK-part2"
 
-    mount $FIRSTDISK-part2 $TEMPMOUNT
+    mount "$FIRSTDISK-part2" $TEMPMOUNT
 
     mkdir -p $TEMPMOUNT/boot/efi
 
     mkdir -p $TEMPMOUNT/etc
 
-    mount $FIRSTDISK-part1 $TEMPMOUNT/boot/efi
+    mount "$FIRSTDISK-part1" $TEMPMOUNT/boot/efi
 
     for j in /dev/disk/by-partuuid/*; do
-        if [ "$(readlink -f $j)" = "/dev/$DISK"2 ]; then 
-            export ROOT_PARTUUID=$(echo $j | cut -d '/' -f 5)
+        if [[ "$(readlink -f "$j")" = "/dev/$DISK"2 ]]; then 
+            ROOT_PARTUUID=$(echo "$j" | cut -d '/' -f 5)
+            export ROOT_PARTUUID
         fi
     done
 
 cat << EOF > $TEMPMOUNT/etc/fstab
-UUID=$(blkid -s UUID -o value $FIRSTDISK-part2) / ext4 errors=remount-ro 0 1
-UUID=$(blkid -s UUID -o value $FIRSTDISK-part1) /boot/efi vfat defaults,noauto 0 0
+UUID=$(blkid -s UUID -o value "$FIRSTDISK-part2") / ext4 errors=remount-ro 0 1
+UUID=$(blkid -s UUID -o value "$FIRSTDISK-part1") /boot/efi vfat defaults,noauto 0 0
 EOF
 }
 
 bootstrap(){
-    debootstrap $RELEASE $TEMPMOUNT
+    debootstrap "$RELEASE" $TEMPMOUNT
 
     mkdir -p $TEMPMOUNT/etc/network/interfaces.d
 
     for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
 
-cat << EOF > $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
+cat << EOF > $TEMPMOUNT/etc/network/interfaces.d/"$NETDEVICE"
 auto $NETDEVICE
 iface $NETDEVICE inet dhcp
 EOF
@@ -310,13 +315,13 @@ baseChrootConfig(){
 packageInstallBase(){
     chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
 
-    if [ -n "$WIFI_NEEDED" ]; then
+    if [[ -n "$WIFI_NEEDED" ]]; then
        chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi firmware-libertas network-manager"
 
        cp /etc/systemd/system/wifi-autoconnect.service $TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service
 
         for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
-            rm $TEMPMOUNT/etc/network/interfaces.d/$NETDEVICE
+            rm $TEMPMOUNT/etc/network/interfaces.d/"$NETDEVICE"
         done
     fi
 }
@@ -355,7 +360,7 @@ postInstallConfigZfs(){
 
     chroot $TEMPMOUNT /bin/bash -c "chmod +x /usr/bin/zfs-recursive-restore.sh"
 
-    for file in $TEMPMOUNT/etc/logrotate.d/* ; do
+    for file in "$TEMPMOUNT"/etc/logrotate.d/* ; do
         if grep -Eq "(^|[^#y])compress" "$file" ; then
             sed -i -r "s/(^|[^#y])(compress)/\1#\2/" "$file"
         fi
@@ -395,6 +400,17 @@ cat << 'EOF' > $TEMPMOUNT/etc/sanoid/sanoid.conf
         autosnap = yes
         autoprune = yes
 EOF
+
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
+        echo "$ENCRYPTIONPASS" > $TEMPMOUNT/$KEY_FILE        
+        chmod 000 $TEMPMOUNT/$KEY_FILE
+    elif [[ -z "$ENCRYPTIONPASS" ]]; then
+        echo "No encryption"
+    else 
+        echo "Not a supported encryption configuration, how did you get here?"
+        sleep 500
+        exit 1
+    fi
 }
     
 userSetup(){
@@ -404,7 +420,7 @@ userSetup(){
 
     chroot $TEMPMOUNT /bin/bash -c "mkdir /home/$USER/.ssh"
 
-    echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB3LG8oXQJM7GzoLt50rN630vdVTeGSpYE7f6JBPSMXp ansible-ssh-key' > $TEMPMOUNT/home/$USER/.ssh/authorized_keys
+    echo 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB3LG8oXQJM7GzoLt50rN630vdVTeGSpYE7f6JBPSMXp ansible-ssh-key' > $TEMPMOUNT/home/"$USER"/.ssh/authorized_keys
 
     chroot $TEMPMOUNT /bin/bash -c "chown -R $USER:$USER /home/$USER"
 
@@ -442,8 +458,7 @@ EOF
 
     cp /root/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
-    if [ "$DISKLAYOUT" == "zfs_mirror" ]; then
-
+    if [[ "$DISKLAYOUT" = "zfs_mirror" ]]; then
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
     fi
 }
@@ -467,7 +482,7 @@ echo "  3)Open Shell to live environment, delaying the installation until done"
 
 
 read -rt $TIMEOUT n
-if [ -z "$n" ]
+if [[ -z "$n" ]]
 then
     n=1
 fi
@@ -479,15 +494,15 @@ esac
 
 mkdir -p $TEMPMOUNT
 
-if [ "$DISKLAYOUT" = "zfs_single"  ]; then
+if [[ "$DISKLAYOUT" = "zfs_single"  ]]; then
 
     zfsSingleDiskSetup
 
-elif [ "$DISKLAYOUT" = "zfs_mirror" ]; then
+elif [[ "$DISKLAYOUT" = "zfs_mirror" ]]; then
     
     zfsMirrorDiskSetup
 
-elif [ "$DISKLAYOUT" = "ext4_single" ]; then
+elif [[ "$DISKLAYOUT" = "ext4_single" ]]; then
 
     ext4SingleDiskSetup
 
@@ -510,7 +525,7 @@ ping -c 4 google.com || export WIFI_NEEDED=yes
 
 echo ''
 
-if [ -n "$WIFI_NEEDED" ]; then
+if [[ -n "$WIFI_NEEDED" ]]; then
 
     echo "No network connectivity, attempting to conect to wifi..."
     echo ''
@@ -527,7 +542,7 @@ baseChrootConfig
 
 packageInstallBase
 
-if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
+if [[ "$DISKLAYOUT" = "zfs_single" || "$DISKLAYOUT" = "zfs_mirror" ]]; then
 
     packageInstallZfs
 
@@ -545,7 +560,7 @@ userSetup
 
 bootSetup
 
-if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
+if [[ "$DISKLAYOUT" = "zfs_single" || "$DISKLAYOUT" = "zfs_mirror" ]]; then
 
     bootSetupZfs
 
@@ -553,7 +568,7 @@ if [ "$DISKLAYOUT" = "zfs_single" -o "$DISKLAYOUT" = "zfs_mirror" ]; then
 
     zpool export zroot
 
-elif [ "$DISKLAYOUT" = "ext4_single" ]; then
+elif [[ "$DISKLAYOUT" = "ext4_single" ]]; then
 
     bootSetupExt4
 
