@@ -17,7 +17,9 @@ export TIMEZONE=America/Los_Angeles
 LIVEDISK=$(lsblk -dno pkname "$(mount | grep '/usr/lib/live/mount/medium' | cut -d ' ' -f1)")
 export LIVEDISK
 
-export KEY_FILE='etc/zfs/zroot.key'
+export KEY_PATH='/etc/zfs'
+
+export KEY_FILE='zroot.key'
 
 TIMEOUT=30
 
@@ -68,7 +70,10 @@ zfsSingleDiskSetup(){
     sleep 3
 
     if [[ -n "$ENCRYPTIONPASS" ]]; then
-        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file:///$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot "$FIRSTDISK-part2"
+        mkdir -p $KEY_PATH
+        echo "$ENCRYPTIONPASS" > $KEY_PATH/$KEY_FILE        
+        chmod 000 "$KEY_PATH/$KEY_FILE"
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file://$KEY_PATH/$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot "$FIRSTDISK-part2"
     elif [[ -z "$ENCRYPTIONPASS" ]]; then
         zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot "$FIRSTDISK-part2"
     else 
@@ -97,7 +102,7 @@ zfsSingleDiskSetup(){
     zpool import -N -R $TEMPMOUNT zroot
     
     if [[ -n "$ENCRYPTIONPASS" ]]; then
-        echo "$ENCRYPTIONPASS" | zfs load-key zroot
+        zfs load-key zroot
     fi
 
     zfs mount zroot/ROOT/default
@@ -147,7 +152,10 @@ zfsMirrorDiskSetup(){
     sleep 3    
 
     if [[ -n "$ENCRYPTIONPASS" ]]; then
-        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file:///$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot mirror "$FIRSTDISK-part2" "$SECONDDISK-part2"
+        mkdir -p $KEY_PATH
+        echo "$ENCRYPTIONPASS" > $KEY_PATH/$KEY_FILE        
+        chmod 000 "$KEY_PATH/$KEY_FILE"
+        echo "$ENCRYPTIONPASS" | zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -O encryption=aes-256-gcm -O keylocation="file://$KEY_PATH/$KEY_FILE" -O keyformat=passphrase -R $TEMPMOUNT zroot mirror "$FIRSTDISK-part2" "$SECONDDISK-part2"
     elif [[ -z "$ENCRYPTIONPASS" ]]; then
         zpool create -f -o ashift=12 -o autotrim=on -O acltype=posixacl -O compression=lz4 -O dnodesize=auto -O relatime=on -O xattr=sa -O normalization=formD -O canmount=off -O mountpoint=/ -R $TEMPMOUNT zroot mirror "$FIRSTDISK-part2" "$SECONDDISK-part2"
     else 
@@ -178,7 +186,7 @@ zfsMirrorDiskSetup(){
     zpool import -N -R $TEMPMOUNT zroot
 
     if [[ -n "$ENCRYPTIONPASS" ]]; then
-        echo "$ENCRYPTIONPASS" | zfs load-key zroot
+        zfs load-key zroot
     fi
 
     zfs mount zroot/ROOT/default
@@ -310,6 +318,18 @@ baseChrootConfig(){
     echo "$HOSTNAME" > $TEMPMOUNT/etc/hostname
     
     echo "127.0.1.1 $HOSTNAME.$DOMAIN $HOSTNAME" >> $TEMPMOUNT/etc/hosts
+
+    if [[ -n "$ENCRYPTIONPASS" ]]; then
+        mkdir -p $TEMPMOUNT/$KEY_PATH
+        echo "$ENCRYPTIONPASS" > $TEMPMOUNT$KEY_PATH/$KEY_FILE        
+        chmod 000 $TEMPMOUNT$KEY_PATH/$KEY_FILE
+    elif [[ -z "$ENCRYPTIONPASS" ]]; then
+        echo "No encryption"
+    else 
+        echo "Not a supported encryption configuration, how did you get here?"
+        sleep 500
+        exit 1
+    fi
 }
 
 packageInstallBase(){
@@ -400,17 +420,6 @@ cat << 'EOF' > $TEMPMOUNT/etc/sanoid/sanoid.conf
         autosnap = yes
         autoprune = yes
 EOF
-
-    if [[ -n "$ENCRYPTIONPASS" ]]; then
-        echo "$ENCRYPTIONPASS" > $TEMPMOUNT/$KEY_FILE        
-        chmod 000 $TEMPMOUNT/$KEY_FILE
-    elif [[ -z "$ENCRYPTIONPASS" ]]; then
-        echo "No encryption"
-    else 
-        echo "Not a supported encryption configuration, how did you get here?"
-        sleep 500
-        exit 1
-    fi
 }
     
 userSetup(){
