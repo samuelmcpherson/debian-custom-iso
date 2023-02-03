@@ -252,6 +252,14 @@ search --set=root --file /DEBIAN_CUSTOM
 set default="0"
 set timeout=30
 
+insmod part_gpt
+insmod part_msdos
+insmod fat
+insmod iso9660
+
+insmod all_video
+insmod font
+
 menuentry "Debian 11 bullseye: Single disk ext4 root" {
     linux (\$root)/live/vmlinuz boot=live bootmode=efi release=bullseye disklayout=ext4_single rootpass=$ROOTPASS user=$USER userpass=$USERPASS
     initrd (\$root)/live/initrd
@@ -317,7 +325,9 @@ cp /usr/lib/syslinux/modules/bios/* "$WORKDIR/staging/isolinux/"
 
 cp -r /usr/lib/grub/x86_64-efi/* "$WORKDIR/staging/boot/grub/x86_64-efi/"
 
-grub-mkstandalone --format=x86_64-efi --output="$WORKDIR"/tmp/bootx64.efi --locales="" --fonts="" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
+grub-mkstandalone --locales="" --themes="" --fonts="" --format=i386-efi --modules="part_gpt part_msdos fat iso9660" --output="$WORKDIR/tmp/bootia32.efi" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
+
+grub-mkstandalone --locales="" --themes="" --fonts="" --format=x86_64-efi --modules="part_gpt part_msdos fat iso9660" --output="$WORKDIR/tmp/bootx64.efi" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
 
 dd if=/dev/zero of="$WORKDIR"/staging/EFI/boot/efiboot.img bs=1M count=20 
 
@@ -325,7 +335,7 @@ mkfs.vfat "$WORKDIR"/staging/EFI/boot/efiboot.img
 
 mmd -i "$WORKDIR"/staging/EFI/boot/efiboot.img efi efi/boot
 
-mcopy -vi "$WORKDIR"/staging/EFI/boot/efiboot.img "$WORKDIR"/tmp/bootx64.efi ::efi/boot/
+mcopy -vi "$WORKDIR/staging/EFI/boot/efiboot.img" "$WORKDIR/tmp/bootia32.efi" "$WORKDIR/tmp/bootx64.efi" "$WORKDIR/tmp/bootx64.efi" ::efi/boot/
 
 xorriso -as mkisofs -iso-level 3 -o "$WORKDIR/debian-custom.iso" -full-iso9660-filenames -volid "DEBIAN_CUSTOM" -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -eltorito-boot isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table --eltorito-catalog isolinux/isolinux.cat -eltorito-alt-boot -e /EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat -append_partition 2 0xef "$WORKDIR"/staging/EFI/boot/efiboot.img "$WORKDIR/staging"
 
