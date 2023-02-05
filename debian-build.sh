@@ -119,13 +119,9 @@ chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linu
 
 chroot $TEMPMOUNT /bin/bash -c "apt install -y --no-install-recommends zfs-dkms zfsutils-linux"
 
-mkdir $TEMPMOUNT/root/zbm-build
+mkdir $TEMPMOUNT/root/zbm
 
-git clone https://github.com/zbm-dev/zfsbootmenu.git $TEMPMOUNT/root/zfsbootmenu
-
-sed -i 's/ "/ intel_ish_ipc intel_ishtp_hid intel_ishtp intel_ishtp_loader "/' $TEMPMOUNT/root/zfsbootmenu/etc/zfsbootmenu/dracut.conf.d/omit-drivers.conf
-
-$TEMPMOUNT/root/zfsbootmenu/zbm-builder.sh -C -H -l $TEMPMOUNT/root/zfsbootmenu -b $TEMPMOUNT/root/zbm-build
+wget https://get.zfsbootmenu.org/efi -O $TEMPMOUNT/root/zbm/vmlinuz.EFI
 
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
 [Unit]
@@ -164,11 +160,11 @@ EOF
 
 mksquashfs $TEMPMOUNT "$WORKDIR"/staging/live/filesystem.squashfs -e boot
 
-cp $TEMPMOUNT/boot/vmlinuz-* "$WORKDIR"/staging/live/vmlinuz 
+cp $TEMPMOUNT/boot/vmlinuz-* "$WORKDIR/staging/live/vmlinuz"
 
-cp $TEMPMOUNT/boot/initrd.img-* "$WORKDIR"/staging/live/initrd
+cp $TEMPMOUNT/boot/initrd.img-* "$WORKDIR/staging/live/initrd"
 
-cat << EOF > "$WORKDIR"/staging/isolinux/isolinux.cfg
+cat << EOF > "$WORKDIR/staging/isolinux/isolinux.cfg"
 UI vesamenu.c32
 
 MENU TITLE Boot Menu
@@ -246,7 +242,7 @@ LABEL linux
   APPEND initrd=/live/initrd boot=live bootmode=bios release=bookworm disklayout=zfs_mirror rootpass=$ROOTPASS user=$USER userpass=$USERPASS encryptionpass=$ENCRYPTIONPASS
 EOF
 
-cat << EOF > "$WORKDIR"/staging/boot/grub/grub.cfg
+cat << EOF > "$WORKDIR/staging/boot/grub/grub.cfg"
 search --set=root --file /DEBIAN_CUSTOM
 
 set default="0"
@@ -325,8 +321,6 @@ cp /usr/lib/syslinux/modules/bios/* "$WORKDIR/staging/isolinux/"
 
 cp -r /usr/lib/grub/x86_64-efi/* "$WORKDIR/staging/boot/grub/x86_64-efi/"
 
-grub-mkstandalone --locales="" --themes="" --fonts="" --format=i386-efi --modules="part_gpt part_msdos fat iso9660" --output="$WORKDIR/tmp/bootia32.efi" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
-
 grub-mkstandalone --locales="" --themes="" --fonts="" --format=x86_64-efi --modules="part_gpt part_msdos fat iso9660" --output="$WORKDIR/tmp/bootx64.efi" "boot/grub/grub.cfg=$WORKDIR/tmp/grub-standalone.cfg"
 
 dd if=/dev/zero of="$WORKDIR"/staging/EFI/boot/efiboot.img bs=1M count=20 
@@ -335,7 +329,7 @@ mkfs.vfat "$WORKDIR"/staging/EFI/boot/efiboot.img
 
 mmd -i "$WORKDIR"/staging/EFI/boot/efiboot.img efi efi/boot
 
-mcopy -vi "$WORKDIR/staging/EFI/boot/efiboot.img" "$WORKDIR/tmp/bootia32.efi" "$WORKDIR/tmp/bootx64.efi" "$WORKDIR/tmp/bootx64.efi" ::efi/boot/
+mcopy -vi "$WORKDIR/staging/EFI/boot/efiboot.img" "$WORKDIR/tmp/bootx64.efi" "$WORKDIR/staging/boot/grub/grub.cfg" ::efi/boot/
 
 xorriso -as mkisofs -iso-level 3 -o "$WORKDIR/debian-custom.iso" -full-iso9660-filenames -volid "DEBIAN_CUSTOM" -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin -eltorito-boot isolinux/isolinux.bin -no-emul-boot -boot-load-size 4 -boot-info-table --eltorito-catalog isolinux/isolinux.cat -eltorito-alt-boot -e /EFI/boot/efiboot.img -no-emul-boot -isohybrid-gpt-basdat -append_partition 2 0xef "$WORKDIR"/staging/EFI/boot/efiboot.img "$WORKDIR/staging"
 

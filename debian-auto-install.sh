@@ -465,7 +465,7 @@ cat << EOF > $TEMPMOUNT/boot/efi/EFI/zbm/refind_linux.conf
 "Boot to menu"  "zfsbootmenu:POOL=zroot zbm.import_policy=hostid zbm.set_hostid zbm.show ro quiet loglevel=4"
 EOF
 
-    cp /root/zbm-build/build/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
+    cp /root/zbm/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
     if [[ "$DISKLAYOUT" = "zfs_mirror" ]]; then
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
