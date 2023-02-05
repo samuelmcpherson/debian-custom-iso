@@ -333,7 +333,7 @@ baseChrootConfig(){
 }
 
 packageInstallBase(){
-    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man unattended-upgrades"
+    chroot $TEMPMOUNT /bin/bash -c "apt install -y dpkg-dev linux-headers-amd64 linux-image-amd64 systemd-sysv firmware-linux fwupd intel-microcode amd64-microcode dconf-cli console-setup wget git openssh-server sudo sed python3 dosfstools apt-transport-https rsync apt-file man"
 
     if [[ -n "$WIFI_NEEDED" ]]; then
        chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi firmware-libertas network-manager"
@@ -357,22 +357,6 @@ postInstallConfig(){
     sed -i '/PasswordAuthentication/c\PasswordAuthentication\ no' $TEMPMOUNT/etc/ssh/sshd_config
     
     chroot $TEMPMOUNT /bin/bash -c "apt-file update"
-
-cat << 'EOF' >> $TEMPMOUNT/etc/apt/apt.conf.d/50unattended-upgrades
-
-Unattended-Upgrade::AutoFixInterruptedDpkg "true";
-Unattended-Upgrade::MinimalSteps "true";
-Unattended-Upgrade::InstallOnShutdown "false";
-Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
-Unattended-Upgrade::Remove-New-Unused-Dependencies "true";
-Unattended-Upgrade::Remove-Unused-Dependencies "false";
-Unattended-Upgrade::Automatic-Reboot "false";
-Unattended-Upgrade::Automatic-Reboot-WithUsers "false";
-Unattended-Upgrade::SyslogEnable "true";
-Unattended-Upgrade::SyslogFacility "daemon";
-Unattended-Upgrade::Verbose "true";
-
-EOF
 }
 
 postInstallConfigZfs(){
