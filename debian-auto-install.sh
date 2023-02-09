@@ -14,7 +14,7 @@ export LANG=en_US.UTF-8
 
 export TIMEZONE=America/Los_Angeles
 
-LIVEDISK=$(lsblk -dno pkname "$(mount | grep '/usr/lib/live/mount/medium' | cut -d ' ' -f1)")
+LIVEDISK="$(mount | grep '/run/live/medium' | cut -d ' ' -f1 | cut -d '/' -f3)"
 export LIVEDISK
 
 export KEY_PATH='/etc/zfs'
