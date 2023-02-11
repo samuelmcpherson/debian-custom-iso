@@ -277,12 +277,12 @@ EOF
     cp /etc/hostid $TEMPMOUNT/etc/hostid
 
 cat << EOF > $TEMPMOUNT/etc/apt/sources.list
-deb http://deb.debian.org/debian $RELEASE main contrib non-free
-deb-src http://deb.debian.org/debian $RELEASE main contrib non-free
-deb http://security.debian.org/debian-security $RELEASE-security main contrib non-free
-deb-src http://security.debian.org/debian-security $RELEASE-security main contrib non-free
-deb http://deb.debian.org/debian $RELEASE-updates main contrib non-free
-deb-src http://deb.debian.org/debian $RELEASE-updates main contrib non-free
+deb http://deb.debian.org/debian $RELEASE main contrib non-free non-free-firmware
+deb-src http://deb.debian.org/debian $RELEASE main contrib non-free non-free-firmware
+deb http://security.debian.org/debian-security $RELEASE-security main contrib non-free non-free-firmware
+deb-src http://security.debian.org/debian-security $RELEASE-security main contrib non-free non-free-firmware
+deb http://deb.debian.org/debian $RELEASE-updates main contrib non-free non-free-firmware
+deb-src http://deb.debian.org/debian $RELEASE-updates main contrib non-free non-free-firmware
 EOF
 
 
