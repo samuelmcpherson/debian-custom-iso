@@ -452,7 +452,11 @@ EOF
     cp /root/zbm/vmlinuz.EFI $TEMPMOUNT/boot/efi/EFI/zbm/vmlinuz.EFI 
 
     if [[ "$DISKLAYOUT" = "zfs_mirror" ]]; then
+        
         chroot $TEMPMOUNT /bin/bash -c "/usr/bin/rsync -a /boot/efi/EFI /boot/efi2"
+
+        chroot $TEMPMOUNT /bin/bash -c "efibootmgr --create --disk $SECONDDISK --part 1 --loader /EFI/refind/refind_x64.efi --label 'rEFInd Boot Manager 2' --unicode"
+    
     fi
 }
 bootSetupExt4(){
