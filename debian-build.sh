@@ -22,7 +22,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 export LC_ALL=C
 
-while getopts 'l:e:r:u:p:d:v:s:w:h' OPTION; do
+while getopts 'l:e:r:u:p:d:v:s:w:h:i' OPTION; do
   case "$OPTION" in
     l)
       export LIVEROOTPASS="$OPTARG"
@@ -61,8 +61,10 @@ script usage: $(basename \$0) [options] <output directory for finished iso>
 [-r <root password for installed system>] (default: changeme)
 [-u <user account for installed system>] (default: ansible)
 [-p <user password for installed system>] (default: changeme)
-[-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
 [-v <live system release>] (default: bullseye)
+[-s <wifi ssid>]
+[-w <wifi password>]
+[-i] connect to hidden ssid
 [-h] print these usage instructions
 EOF
       exit 1
@@ -74,8 +76,10 @@ script usage: $(basename \$0) [options] <output directory for finished iso>
 [-r <root password for installed system>] (default: changeme)
 [-u <user account for installed system>] (default: ansible)
 [-p <user password for installed system>] (default: changeme)
-[-w <working directory to build live system>] (default: /live-build) NOTE: Contents will be overwritten
 [-v <live system release>] (default: bullseye)
+[-s <wifi ssid>]
+[-w <wifi password>]
+[-i] connect to hidden ssid
 [-h] print these usage instructions
 EOF
       exit 1
