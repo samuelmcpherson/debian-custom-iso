@@ -51,6 +51,9 @@ while getopts 'l:e:r:u:p:d:v:s:w:h' OPTION; do
     w)
       export WIFIPASS="$OPTARG"
       ;;
+    i)
+      export HIDDENSSID=True
+      ;;
     h)
 cat << EOF >&2
 script usage: $(basename \$0) [options] <output directory for finished iso>
@@ -123,6 +126,8 @@ mkdir $TEMPMOUNT/root/zbm
 
 wget https://get.zfsbootmenu.org/efi -O $TEMPMOUNT/root/zbm/vmlinuz.EFI
 
+if [[ -n "$HIDDENSSID" ]]; then 
+
 cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
 [Unit]
 Description=Wifi network
@@ -132,6 +137,27 @@ After=multi-user.target
 Type=simple
 ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
 EOF
+
+elif [[ -z "$HIDDENSSID" ]]; then 
+
+cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
+[Unit]
+Description=Wifi network
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
+EOF
+
+else 
+
+  echo "It shouldn't be possible for a wifi SSID to be hidden and not hidden"
+  echo "How did you get here?"
+  sleep 2400
+  exit 1
+
+fi
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 
