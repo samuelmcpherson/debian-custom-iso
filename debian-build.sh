@@ -139,7 +139,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS"
+ExecStart=/usr/bin/nmcli dev wifi connect "$WIFISSID" password "$WIFIPASS" hidden yes
 EOF
 
 elif [[ -z "$HIDDENSSID" ]]; then 
