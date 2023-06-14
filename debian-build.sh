@@ -132,26 +132,38 @@ wget https://get.zfsbootmenu.org/efi -O $TEMPMOUNT/root/zbm/vmlinuz.EFI
 
 if [[ -n "$HIDDENSSID" ]]; then 
 
-cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
-[Unit]
-Description=Wifi network
-After=multi-user.target
+cat << EOF > "$TEMPMOUNT/usr/bin/wifi-autoconnect.sh"
+#!/bin/bash
 
-[Service]
-Type=simple
-ExecStart=/usr/bin/nmcli dev wifi connect $WIFISSID password $WIFIPASS hidden yes
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS' hidden yes
+
+sleep 3
+
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS' hidden yes
+
+sleep 3
+
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS' hidden yes
+
+sleep 3
 EOF
 
 elif [[ -z "$HIDDENSSID" ]]; then 
 
-cat << EOF > "$TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service"
-[Unit]
-Description=Wifi network
-After=multi-user.target
+cat << EOF > "$TEMPMOUNT/usr/bin/wifi-autoconnect.sh"
+#!/bin/bash
 
-[Service]
-Type=simple
-ExecStart=/usr/bin/nmcli dev wifi connect $WIFISSID password $WIFIPASS
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS'
+
+sleep 3
+
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS'
+
+sleep 3
+
+/usr/bin/nmcli dev wifi connect '$WIFISSID' password '$WIFIPASS'
+
+sleep 3
 EOF
 
 else 
@@ -162,6 +174,8 @@ else
   exit 1
 
 fi
+
+chmod +x "$TEMPMOUNT/usr/bin/wifi-autoconnect.sh"
 
 sed -i '/PermitRootLogin/c\PermitRootLogin\ yes' $TEMPMOUNT/etc/ssh/sshd_config
 

@@ -338,11 +338,11 @@ packageInstallBase(){
     if [[ -n "$WIFI_NEEDED" ]]; then
        chroot $TEMPMOUNT /bin/bash -c "apt install -y firmware-iwlwifi firmware-libertas network-manager"
 
-       cp /etc/systemd/system/wifi-autoconnect.service $TEMPMOUNT/etc/systemd/system/wifi-autoconnect.service
+       cp /usr/bin/wifi-autoconnect.sh $TEMPMOUNT/usr/bin/wifi-autoconnect.sh
 
-        for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
-            rm $TEMPMOUNT/etc/network/interfaces.d/"$NETDEVICE"
-        done
+       for NETDEVICE in $(ip -br l | grep -v lo | cut -d ' ' -f1); do 
+           rm $TEMPMOUNT/etc/network/interfaces.d/"$NETDEVICE"
+       done
     fi
 }
 
@@ -527,7 +527,7 @@ if [[ -n "$WIFI_NEEDED" ]]; then
     echo "No network connectivity, attempting to conect to wifi..."
     echo ''
     
-    systemctl start wifi-autoconnect.service
+    bash /usr/bin/wifi-autoconnect.sh
 
 fi
 
