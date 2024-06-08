@@ -14,7 +14,7 @@ export LANG=en_US.UTF-8
 
 export TIMEZONE=America/Los_Angeles
 
-LIVEDISK="$(mount | grep '/run/live/medium' | cut -d ' ' -f1 | cut -d '/' -f3)"
+LIVEDISK="$(mount | grep '/run/live/medium' | cut -d ' ' -f1 | cut -d '/' -f3 | sed 's/[0-9]*//g')"
 export LIVEDISK
 
 export KEY_PATH='/etc/zfs'
