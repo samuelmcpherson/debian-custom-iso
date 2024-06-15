@@ -12,7 +12,7 @@ export USERPASS=changeme
 
 export WORKDIR="/live-build"
 
-export RELEASE=bullseye
+export RELEASE=bookworm
 
 export TEMPMOUNT="$WORKDIR/chroot"
 
@@ -102,9 +102,21 @@ mkdir -p $TEMPMOUNT
 
 debootstrap "$RELEASE" $TEMPMOUNT
 
+
+if [[ "$RELEASE" = 'bullseye' ]]; then 
+
 cat << EOF > $TEMPMOUNT/etc/apt/sources.list
 deb http://deb.debian.org/debian $RELEASE main contrib non-free
 EOF
+
+else
+
+cat << EOF > $TEMPMOUNT/etc/apt/sources.list
+deb http://deb.debian.org/debian $RELEASE main contrib non-free non-free-firmware
+EOF
+
+fi
+
 
 echo "debian-live" > $TEMPMOUNT/etc/hostname
 
