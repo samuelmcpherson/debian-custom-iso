@@ -20,6 +20,8 @@ export SCRIPTDIR="/root/debian-custom-iso"
 
 export DEBIAN_FRONTEND=noninteractive
 
+export ENCRYPTIONPASS=changeme
+
 export LC_ALL=C
 
 while getopts 'l:e:r:u:p:d:v:s:w:h:i' OPTION; do
